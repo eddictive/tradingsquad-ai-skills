@@ -1,0 +1,30 @@
+{
+  "name": "tradingsquad-ai-skills",
+  "version": "1.0.0",
+  "description": "A collaborative multi-agent framework delivering institutional-grade trading intelligence for Indonesian equities (IDX).",
+  "main": "scripts/install-skills.js",
+  "bin": {
+    "tradingsquad-ai-skills": "./scripts/install-skills.js",
+    "tradingsquad-skills": "./scripts/install-skills.js"
+  },
+  "scripts": {
+    "install-skills": "./scripts/install-skills.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eddictive/tradingsquad-ai-skills.git"
+  },
+  "keywords": [
+    "antigravity",
+    "grok",
+    "claude",
+    "codex",
+    "skills",
+    "agentic",
+    "trading agent",
+    "institutional analysis",
+    "wyckoff"
+  ],
+  "author": "",
+  "license": "ISC"
+}
