@@ -57,6 +57,10 @@ const targets = {
     local: path.join(userProjectDir, '.claude', 'skills'),
     global: path.join(os.homedir(), '.claude', 'skills')
   },
+  codex: {
+    local: path.join(userProjectDir, '.codex', 'skills'),
+    global: null
+  },
   grok: {
     local: path.join(userProjectDir, '.grok', 'skills'),
     global: path.join(os.homedir(), '.grok', 'skills')
@@ -137,7 +141,7 @@ async function ensureSkillsSrc() {
 
   console.log(`ℹ️  Local skills source not found. Fetching from GitHub...`);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tradingsquad-skills-'));
-  const tarballUrl = 'https://github.com/yourusername/tradingsquad-ai-skills/archive/refs/heads/main.tar.gz';
+  const tarballUrl = 'https://github.com/eddictive/tradingsquad-ai-skills/archive/refs/heads/main.tar.gz';
   
   await downloadAndExtractTarball(tarballUrl, tempDir);
   
@@ -219,9 +223,20 @@ async function installSkillsFor(clis, isGlobal) {
     } else {
       console.log(`💻 Configuring for OpenAI Codex CLI...`);
       const codexConfigDir = path.join(userProjectDir, '.codex');
+      const codexDest = targets.codex.local;
       ensureDir(codexConfigDir);
+      ensureDir(codexDest);
       ensureDir(path.join(userProjectDir, '.codex', 'state'));
       console.log(`   📂 Pre-created local state directory: .codex/state/`);
+
+      for (const arch of analysts) {
+        const src = path.join(srcDir, arch);
+        const dest = path.join(codexDest, arch);
+        if (fs.existsSync(src)) {
+          copyFolderSync(src, dest);
+          console.log(`   ✅ Loaded ${arch}`);
+        }
+      }
 
       const configPath = path.join(codexConfigDir, 'config.toml');
       if (!fs.existsSync(configPath)) {

@@ -35,13 +35,13 @@ If you do not want to clone this repository, you can execute the installer direc
 #### Method 1: Using `bunx` or `npx`
 ```bash
 # Install locally inside your project workspace (Bun)
-bunx git+https://github.com/yourusername/tradingsquad-ai-skills.git --local
+bunx git+https://github.com/eddictive/tradingsquad-ai-skills.git --local
 
 # Install locally inside your project workspace (Node)
-npx -y git+https://github.com/yourusername/tradingsquad-ai-skills.git --local
+npx -y git+https://github.com/eddictive/tradingsquad-ai-skills.git --local
 
 # Install globally in your home user scope (Bun)
-bunx git+https://github.com/yourusername/tradingsquad-ai-skills.git --global
+bunx git+https://github.com/eddictive/tradingsquad-ai-skills.git --global
 ```
 
 ### B. Standard Installation (Cloned Repo)
@@ -67,6 +67,11 @@ The **Antigravity CLI** automatically indexes skills, supports semantic matches,
 Claude Code supports modular custom commands via slash mapping.
 - **Install:** `npm install -g @anthropic-ai/claude-code`
 - **Invoke:** `/institutional-analyst what is the broker flow summary for BMRI?`
+
+### OpenAI Codex CLI 🤖
+The automated installer will seamlessly create the `.codex/config.toml`, write the `AGENTS.md` manifest, and automatically copy all skill directories into `.codex/skills/`.
+- **Install:** Consult OpenAI Codex official documentation for the latest release.
+- **Invoke:** The Codex Agent automatically parses `AGENTS.md` on startup. Mention `@institutional-analyst` or `@technical-analyst` in your prompt.
 
 ### Grok XAi CLI (Grok Build) 🧠
 Grok reads project-specific configurations mapped heavily in `.grok/grok.md`.
