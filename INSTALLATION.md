@@ -35,13 +35,13 @@ If you do not want to clone this repository, you can execute the installer direc
 #### Method 1: Using `bunx` or `npx`
 ```bash
 # Install locally inside your project workspace (Bun)
-bunx git+https://github.com/eddictive/tradingsquad-ai-skills.git --local
+bunx github:eddictive/tradingsquad-ai-skills --local
 
 # Install locally inside your project workspace (Node)
 npx -y git+https://github.com/eddictive/tradingsquad-ai-skills.git --local
 
 # Install globally in your home user scope (Bun)
-bunx git+https://github.com/eddictive/tradingsquad-ai-skills.git --global
+bunx github:eddictive/tradingsquad-ai-skills --global
 ```
 
 ### B. Standard Installation (Cloned Repo)
