@@ -135,7 +135,14 @@ Detect Smart Money Accumulation (brokers accumulating below current price, large
 Detect Distribution (previous top buyer becomes top seller, large selling above accumulation price, price stalls).
 Calculate Smart Money Score (0-100).
 **Crucial Check:** Look at `top1`, `top3`, and `top5` accumulation in the Market Detector. If `top1` is heavily accumulating but `top5` is distributing, it indicates "Cornering" by a single massive institution.
-**Multi-Timeframe Analysis (HIGHLY RECOMMENDED):** The `getBrokerSummary` and `getForeignFlow` scripts accept an `options` object with a `period` key (e.g., `{ period: 'BROKER_SUMMARY_PERIOD_LAST_1_MONTH' }` or `'BROKER_SUMMARY_PERIOD_LAST_7_DAYS'`). You MUST analyze broker flow across multiple timeframes to spot if long-term accumulation is contradicted by short-term distribution (a shakeout).
+**Multi-Timeframe Analysis Matrix (CRITICAL):**
+The `getBrokerSummary` and `getForeignFlow` scripts accept an `options` object with a `period` key, or `from` and `to` dates (e.g., `{ period: 'BROKER_SUMMARY_PERIOD_LAST_1_MONTH' }` or `{ from: '2026-05-25', to: '2026-06-25' }`).
+You MUST fetch and compare data across timeframes based on the stock's trend:
+1. **Intraday / LATEST**: Use as the Execution Trigger to find timing and sudden cornering.
+2. **LAST_7_DAYS**: Use to detect *Shakeouts* or short-term momentum (if stock is in a tight sideways range).
+3. **LAST_1_MONTH**: The Golden Standard for Swing Trading. Compare this against Intraday to spot Divergence (e.g., big accumulation over 1 month, but minor distribution today = Shakeout).
+4. **LAST_3_MONTHS**: Use for "Macro Accumulation" if the stock has been bottoming/sideways for a long time.
+*Execution Example:* `await api.getBrokerSummary('ADRO', 5, { period: 'BROKER_SUMMARY_PERIOD_LAST_1_MONTH' })`
 
 ## PART 5 — ORDER FLOW INTELLIGENCE
 Analyze bid/offer dominance.
