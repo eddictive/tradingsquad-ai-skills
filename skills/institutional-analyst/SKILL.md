@@ -116,9 +116,13 @@ Identify current phase:
 * **Phase D**: Markup (Higher High, Higher Low, Increasing volume)
 * **Phase E**: Distribution (Large selling, failed breakout, bearish divergence)
 
-## PART 2 — QUANTITATIVE ANALYSIS
-Request this from the **`technical-analyst`** skill. Do not calculate this yourself.
-The `technical-analyst` will provide the Trend Score, Momentum Score, and Volume Intelligence.
+## PART 2 — QUANTITATIVE ANALYSIS 2.0 (100 Points)
+Request this from the **`technical-analyst`** and **`fundamental-analyst`** skills. 
+The total score is weighted as follows:
+*   **Trend & Momentum (30%)**: From technical-analyst (MA, RSI).
+*   **Volume Intelligence (20%)**: From technical-analyst (Volume spikes).
+*   **Fundamental Value (20%)**: From fundamental-analyst (PBV < 1, Low PE).
+*   **Bandar Concentration (30%)**: Calculated from Market Detector (Is top1 accumulating while retail distributes?).
 
 ## PART 3 — TAPE READING
 Analyze price action to detect:
@@ -130,6 +134,7 @@ Analyze price action to detect:
 Detect Smart Money Accumulation (brokers accumulating below current price, large avg positions, consistent buying).
 Detect Distribution (previous top buyer becomes top seller, large selling above accumulation price, price stalls).
 Calculate Smart Money Score (0-100).
+**Crucial Check:** Look at `top1`, `top3`, and `top5` accumulation in the Market Detector. If `top1` is heavily accumulating but `top5` is distributing, it indicates "Cornering" by a single massive institution.
 
 ## PART 5 — ORDER FLOW INTELLIGENCE
 Analyze bid/offer dominance.
@@ -139,57 +144,203 @@ Look for hidden buyers (large offer but price rising) and absorption (large bid 
 Generate Bull Case, Base Case, and Bear Case with specific breakouts, targets, and invalidation levels.
 
 ## PART 7 — RISK MANAGEMENT
-Provide Entry Zone, Stop Loss (based on structure/smart money avg), and Risk Reward Ratio.
+Provide Entry Zone, Stop Loss (based on structure/smart money avg), and Risk Rewa# FINAL OUTPUT FORMAT
+**CRITICAL RULE ON LANGUAGE:** The template below uses English as the default structural language. However, you MUST dynamically translate the entire output into the user's requested language (e.g., if the user asks in Indonesian, provide the report in Indonesian). The *structure* and *data points* must remain identical.
+
+Always return your analysis in this exact markdown format, using code blocks for structured data and GitHub-style alerts (`> [!WARNING]`, `> [!IMPORTANT]`) for emphasis.
+
+# 🏛️ INSTITUTIONAL ANALYSIS REPORT — [TICKER]
+**[Company Name] | IDX: [TICKER]**
+> Analysis Date: **[Date]** | Methodology: Institutional-Grade (Wyckoff + Bandarmology + Order Flow)
 
 ---
 
-# FINAL OUTPUT FORMAT
-Always return your analysis in this exact format:
+## 1. Executive Summary
+```
+Ticker        : 
+Name          : 
+Sector        : 
+Board         : 
 
-# 1. Executive Summary
-```
-Ticker: 
-Current Price: 
+Current Price : 
+Previous Close: 
+Change        : 
 
-Market Bias: Bullish / Neutral / Bearish
-Confidence: 0-100%
+Market Bias   : Bullish / Neutral / Bearish (Short-term vs Swing)
+Confidence    : 0-100%
 ```
+> [!WARNING] or [!TIP]
+> (Provide a 1-2 sentence critical observation here)
 
-# 2. Wyckoff Analysis
-```
-Phase: 
-Evidence: 
-Probability: 
-```
+---
 
-# 3. Quant Score
+## 2. Wyckoff Phase Analysis
 ```
-Trend: 
-Momentum: 
-Volume: 
-Smart Money: 
-Tape: 
+Current Phase : 
 
-Total Score: 
-```
+Evidence:
+  - 
+  - 
 
-# 4. Broker Flow Analysis
-```
-Top Accumulator: 
-Top Distributor: 
-Smart Money Position: 
-Interpretation: 
+Phase Probabilities:
+  - Scenario A: X%
+  - Scenario B: Y%
 ```
 
-# 5. Trading Plan
+---
+
+## 3. Quant Score 2.0 (Technical + Fundamental)
 ```
-Entry: 
-Add Position: 
-Take Profit: 
-Stop Loss: 
-Invalidation: 
+OHLCV Today     : 
+Volume          : 
+
+Technical Metrics (50%):
+  MA-5/10/20 Alignment : 
+  RSI-14               : 
+  Volume Ratio         : 
+
+Fundamental Metrics (20%):
+  PBV            : 
+  PE Ratio       : 
+
+Bandarmology Metrics (30%):
+  Top 1 Accumulation : 
+  Top 5 Accumulation : 
+
+COMPONENT SCORES:
+  Trend & Momentum (30) : 
+  Volume Intel (20)     : 
+  Fundamental Value (20): 
+  Bandar Concen. (30)   : 
+
+Total Quant Score: 0-100
 ```
 
-# 6. Institutional Conclusion
-"Based on quantitative evidence, order flow, broker activity, and Wyckoff structure, the highest probability scenario is..."
-(Never use definitive words like "Guaranteed naik" or "Pastinya bandar".)
+---
+
+## 4. Broker Flow / Bandarmology Analysis
+> Data: Period **[Date]** 
+```
+=== NET BUYER (Accumulator) ===
+Broker  | Type   | Net Lot  | Avg Price | Value        | Status
+--------|--------|----------|-----------|--------------|--------
+
+=== NET SELLER (Distributor) ===
+Broker  | Type   | Net Lot  | Avg Price | Value        | Status
+--------|--------|----------|-----------|--------------|--------
+
+KEY TAKEAWAY: (Provide brief interpretation of the flows)
+```
+```
+Foreign Flow:
+  Foreign Buy  : 
+  Foreign Sell : 
+  Net Foreign  : 
+  
+Bandar Detector:
+  - avg accdist: 
+  - broker_accdist: 
+
+Smart Money Score: 0-100
+```
+
+---
+
+## 5. Order Book Intelligence
+```
+=== ORDERBOOK SNAPSHOT ===
+
+BID (Demand):
+  [List top/massive bids]
+  TOTAL BID ~
+
+OFFER (Supply):
+  [List top/massive offers]
+  TOTAL OFFER ~
+
+BID/ASK RATIO:
+  Bid/Offer Ratio: 
+
+INTERPRETATION:
+  → 
+  → 
+```
+
+---
+
+## 6. Trading Scenarios
+
+### 🐂 Bull Case (Probability: X%)
+```
+Trigger      : 
+Entry Zone   : 
+Target 1     : 
+Target 2     : 
+Invalidation : 
+Logic        : 
+```
+
+### ⚖️ Base Case (Probability: Y%)
+```
+Scenario     : 
+Entry Zone   : 
+Target 1     : 
+Stop Loss    : 
+Logic        : 
+```
+
+### 🐻 Bear Case (Probability: Z%)
+```
+Trigger      : 
+Target Down  : 
+Invalidation : 
+```
+
+---
+
+## 7. 🎯 Trading Plan — Precision Swing Trading
+> [!IMPORTANT]
+> (Provide a brief tactical summary of the setup)
+```
+=== ENTRY PLAN ===
+ENTRY 1 (Aggressive)  :   
+ENTRY 2 (Optimal)     :   
+ENTRY 3 (Conservative): 
+
+Entry Confirmation Signals:
+  ✅ 
+  ✅ 
+
+=== TAKE PROFIT (TP) ===
+TP1: 
+TP2: 
+TP3: 
+
+=== STOP LOSS (SL) ===
+TIGHT SL : 
+MEDIUM SL: 
+WIDE SL  : 
+
+SL RECOMMENDATION: 
+
+=== RISK/REWARD RATIO ===
+Entry X | SL Y | TP Z:
+  Risk   : 
+  Reward : 
+  R/R    : 
+```
+
+---
+
+## 8. Institutional Conclusion
+> *"Based on quantitative evidence, order flow, broker activity, and Wyckoff structure..."*
+(Provide 2-3 paragraphs concluding the analysis. Never use definitive words like "Guaranteed to rise" or "Definitely manipulated".)
+
+---
+
+## 9. Corporate Action Alert
+> [!CAUTION]
+> (If applicable, mention any active corporate actions. If none, omit this section or state "No active corporate actions detected.")
+
+---
+*Disclaimer: This analysis is probabilistic and educational. It is not investment advice. Always conduct your own due diligence and use proper risk management.*
