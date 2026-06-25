@@ -21,12 +21,15 @@ const userProjectDir = process.cwd();
 
 // Detect if we have local source files
 let skillsSrcDir = '';
+let coreSrcDir = '';
 let isLocalSource = false;
 
 try {
   const localPath = path.join(__dirname, '..', 'skills');
+  const localCore = path.join(__dirname, '..', 'core');
   if (fs.existsSync(localPath)) {
     skillsSrcDir = localPath;
+    coreSrcDir = localCore;
     isLocalSource = true;
   }
 } catch (e) {
@@ -35,8 +38,10 @@ try {
 
 if (!isLocalSource) {
   const cwdPath = path.join(userProjectDir, 'skills');
+  const cwdCore = path.join(userProjectDir, 'core');
   if (fs.existsSync(cwdPath)) {
     skillsSrcDir = cwdPath;
+    coreSrcDir = cwdCore;
     isLocalSource = true;
   }
 }
@@ -152,6 +157,7 @@ async function ensureSkillsSrc() {
   }
   
   skillsSrcDir = path.join(tempDir, repoDirName, 'skills');
+  coreSrcDir = path.join(tempDir, repoDirName, 'core');
   
   process.on('exit', () => {
     try {
@@ -197,6 +203,14 @@ async function installSkillsFor(clis, isGlobal) {
         console.log(`   ✅ Loaded ${arch}`);
       }
     }
+    
+    // Copy Core Module
+    if (coreSrcDir && fs.existsSync(coreSrcDir)) {
+      const coreDest = isGlobal ? path.join(os.homedir(), '.gemini', 'antigravity-cli', 'core') : path.join(userProjectDir, '.agents', 'core');
+      ensureDir(coreDest);
+      copyFolderSync(coreSrcDir, coreDest);
+      console.log(`   ✅ Loaded core module`);
+    }
   }
 
   if (clis.includes('claude')) {
@@ -214,6 +228,14 @@ async function installSkillsFor(clis, isGlobal) {
         copyFolderSync(src, dest);
         console.log(`   ✅ Loaded /${arch}`);
       }
+    }
+
+    // Copy Core Module
+    if (coreSrcDir && fs.existsSync(coreSrcDir)) {
+      const coreDest = isGlobal ? path.join(os.homedir(), '.claude', 'core') : path.join(userProjectDir, '.claude', 'core');
+      ensureDir(coreDest);
+      copyFolderSync(coreSrcDir, coreDest);
+      console.log(`   ✅ Loaded core module`);
     }
   }
 
@@ -236,6 +258,14 @@ async function installSkillsFor(clis, isGlobal) {
           copyFolderSync(src, dest);
           console.log(`   ✅ Loaded ${arch}`);
         }
+      }
+
+      // Copy Core Module
+      if (coreSrcDir && fs.existsSync(coreSrcDir)) {
+        const coreDest = path.join(userProjectDir, '.codex', 'core');
+        ensureDir(coreDest);
+        copyFolderSync(coreSrcDir, coreDest);
+        console.log(`   ✅ Loaded core module`);
       }
 
       const configPath = path.join(codexConfigDir, 'config.toml');
@@ -276,6 +306,14 @@ All analysis must respect the specifications detailed under the respective \`SKI
       }
     }
 
+    // Copy Core Module
+    if (coreSrcDir && fs.existsSync(coreSrcDir)) {
+      const coreDest = isGlobal ? path.join(os.homedir(), '.grok', 'core') : path.join(userProjectDir, '.grok', 'core');
+      ensureDir(coreDest);
+      copyFolderSync(coreSrcDir, coreDest);
+      console.log(`   ✅ Loaded core module`);
+    }
+
     if (!isGlobal) {
       console.log(`🧠 Configuring for Grok XAi CLI...`);
       const grokConfigDir = path.join(userProjectDir, '.grok');
@@ -313,6 +351,14 @@ When asked to act as one of these analysts, read and apply the standards, rules,
         copyFolderSync(src, dest);
         console.log(`   ✅ Loaded ${arch}`);
       }
+    }
+
+    // Copy Core Module
+    if (coreSrcDir && fs.existsSync(coreSrcDir)) {
+      const coreDest = isGlobal ? path.join(os.homedir(), '.tradingsquad-ai', 'core') : path.join(userProjectDir, '.skills', '..', 'core'); // Places it next to .skills in generic
+      ensureDir(coreDest);
+      copyFolderSync(coreSrcDir, coreDest);
+      console.log(`   ✅ Loaded core module`);
     }
   }
 
