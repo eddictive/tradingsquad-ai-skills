@@ -4,7 +4,17 @@ const path = require('path');
 class StockbitClient {
   constructor() {
     this.exodusUrl = "https://exodus.stockbit.com";
-    this.tokenFile = path.join(__dirname, "../.stockbit_token.json");
+    
+    const cwdPath = path.join(process.cwd(), '.stockbit_token.json');
+    const localPath = path.join(__dirname, '../.stockbit_token.json');
+    
+    if (fs.existsSync(cwdPath)) {
+      this.tokenFile = cwdPath;
+    } else if (fs.existsSync(localPath)) {
+      this.tokenFile = localPath;
+    } else {
+      this.tokenFile = cwdPath; // Default to workspace root
+    }
     
     this.accessToken = null;
     this.refreshToken = null;

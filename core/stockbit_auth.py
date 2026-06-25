@@ -11,7 +11,16 @@ class StockbitClient:
     """
     def __init__(self):
         self.exodus_url = "https://exodus.stockbit.com"
-        self.token_file = os.path.join(os.path.dirname(__file__), "../.stockbit_token.json")
+        
+        cwd_path = os.path.join(os.getcwd(), ".stockbit_token.json")
+        local_path = os.path.join(os.path.dirname(__file__), "../.stockbit_token.json")
+        
+        if os.path.exists(cwd_path):
+            self.token_file = cwd_path
+        elif os.path.exists(local_path):
+            self.token_file = local_path
+        else:
+            self.token_file = cwd_path  # Default to workspace root
         
         self.access_token = None
         self.refresh_token = None
