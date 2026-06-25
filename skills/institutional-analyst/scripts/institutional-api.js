@@ -6,23 +6,25 @@ class InstitutionalAPIClient extends StockbitClient {
     return data.data || {};
   }
 
-  async getBrokerSummary(ticker, limit = 25) {
+  async getBrokerSummary(ticker, limit = 25, options = {}) {
     const params = {
       transaction_type: "TRANSACTION_TYPE_NET",
       market_board: "MARKET_BOARD_REGULER",
       investor_type: "INVESTOR_TYPE_ALL",
-      limit
+      limit,
+      ...options
     };
     const data = await this._getExodus(`/marketdetectors/${ticker}`, params);
     return data.data || {};
   }
 
-  async getForeignFlow(ticker, limit = 25) {
+  async getForeignFlow(ticker, limit = 25, options = {}) {
     const params = {
       transaction_type: "TRANSACTION_TYPE_NET",
       market_board: "MARKET_BOARD_REGULER",
       investor_type: "INVESTOR_TYPE_FOREIGN",
-      limit
+      limit,
+      ...options
     };
     const data = await this._getExodus(`/marketdetectors/${ticker}`, params);
     return data.data || {};

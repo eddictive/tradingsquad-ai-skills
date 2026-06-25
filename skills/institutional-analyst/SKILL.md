@@ -135,6 +135,7 @@ Detect Smart Money Accumulation (brokers accumulating below current price, large
 Detect Distribution (previous top buyer becomes top seller, large selling above accumulation price, price stalls).
 Calculate Smart Money Score (0-100).
 **Crucial Check:** Look at `top1`, `top3`, and `top5` accumulation in the Market Detector. If `top1` is heavily accumulating but `top5` is distributing, it indicates "Cornering" by a single massive institution.
+**Multi-Timeframe Analysis (HIGHLY RECOMMENDED):** The `getBrokerSummary` and `getForeignFlow` scripts accept an `options` object with a `period` key (e.g., `{ period: 'BROKER_SUMMARY_PERIOD_LAST_1_MONTH' }` or `'BROKER_SUMMARY_PERIOD_LAST_7_DAYS'`). You MUST analyze broker flow across multiple timeframes to spot if long-term accumulation is contradicted by short-term distribution (a shakeout).
 
 ## PART 5 — ORDER FLOW INTELLIGENCE
 Analyze bid/offer dominance.

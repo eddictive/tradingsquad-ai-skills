@@ -15,7 +15,7 @@ class InstitutionalAPIClient(StockbitClient):
         """Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength."""
         return self._get_exodus(f"/orderbook/companies/{ticker}").get("data", {})
 
-    def get_broker_summary(self, ticker, limit=25):
+    def get_broker_summary(self, ticker, limit=25, **kwargs):
         """Analyze top buyer/seller brokers, average accumulation price, net accumulation."""
         params = {
             "transaction_type": "TRANSACTION_TYPE_NET",
@@ -23,9 +23,10 @@ class InstitutionalAPIClient(StockbitClient):
             "investor_type": "INVESTOR_TYPE_ALL",
             "limit": limit
         }
+        params.update(kwargs)
         return self._get_exodus(f"/marketdetectors/{ticker}", params=params).get("data", {})
 
-    def get_foreign_flow(self, ticker, limit=25):
+    def get_foreign_flow(self, ticker, limit=25, **kwargs):
         """Analyze foreign net buy/sell and institutional participation."""
         params = {
             "transaction_type": "TRANSACTION_TYPE_NET",
@@ -33,6 +34,7 @@ class InstitutionalAPIClient(StockbitClient):
             "investor_type": "INVESTOR_TYPE_FOREIGN",
             "limit": limit
         }
+        params.update(kwargs)
         return self._get_exodus(f"/marketdetectors/{ticker}", params=params).get("data", {})
 
     def get_financial_data(self, ticker, year_limit=5):
