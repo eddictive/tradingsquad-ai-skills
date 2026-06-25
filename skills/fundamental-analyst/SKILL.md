@@ -30,6 +30,10 @@ Look for:
 *   `Current PE Ratio (TTM)` and `Forward PE Ratio`
 *   `Current Price to Book Value` (PBV)
 *   `Current Price To Free Cashflow` (P/FCF)
+*   `Debt to Equity Ratio (Quarter)` (DER)
+*   `Net Profit Margin (Quarter)` (NPM)
+*   `Return on Equity (TTM)` (ROE)
+*   `Dividend Yield`
 *   `Earnings Yield`
 
 ## getFinancialReport(ticker, type)
@@ -46,8 +50,14 @@ Calculate a valuation score based on PBV, PE, and PEG compared to industry avera
 *   **50-75**: Undervalued
 *   **> 75**: Deep Value (Bargain)
 
-## PART 2 — PROFITABILITY & HEALTH
-Analyze Return on Equity (ROE), Net Profit Margin (NPM), and Debt-to-Equity Ratio (DER). Ensure the company is generating positive Free Cash Flow.
+## PART 2 — PROFITABILITY, HEALTH & DIVIDEND
+Analyze Return on Equity (ROE), Net Profit Margin (NPM), and Debt-to-Equity Ratio (DER). Ensure the company is generating positive Free Cash Flow and evaluate its Dividend Yield history.
+
+## PART 3 — FAIR VALUE (NILAI WAJAR) CALCULATION
+You MUST calculate the theoretical Fair Value using one of the following methods (or a blend):
+1. **Graham Number**: `SQRT(22.5 * EPS * BVPS)`
+2. **Historical PE/PBV Band**: Compare current PE/PBV to its 5-year mean.
+Provide the exact numerical Fair Value target (e.g., Rp 3.500) and the Margin of Safety.
 
 ---
 
@@ -64,7 +74,7 @@ Always return your analysis in this exact markdown format:
 Current PE Ratio (TTM): 
 Price to Book (PBV)   : 
 Price to FCF          : 
-Earnings Yield        : 
+Dividend Yield        : 
 
 Valuation Status      : Overvalued / Fair / Undervalued / Deep Value
 Valuation Score       : 0-100
@@ -80,5 +90,13 @@ Debt-to-Equity (DER)  :
 Free Cash Flow Status : 
 ```
 
-## 3. Fundamental Conclusion
-(Provide a brief conclusion on whether the stock is fundamentally sound and worth holding long-term).
+## 3. Fair Value (Nilai Wajar) Calculation
+```
+Calculation Method : Graham Number / Historical / DCF
+Intrinsic Value    : Rp X.XXX
+Current Price      : Rp Y.YYY
+Margin of Safety   : ZZ%
+```
+
+## 4. Fundamental Conclusion
+(Provide a brief conclusion on whether the stock is fundamentally sound and worth holding long-term. If it's a Deep Value stock being accumulated by foreign/institutional money, highlight this!).
