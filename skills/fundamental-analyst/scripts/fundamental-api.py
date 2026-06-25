@@ -27,7 +27,7 @@ if __name__ == "__main__":
     api = FundamentalAPIClient()
     try:
         api.login()
-        data = api.get_keystats("BBCA", 1)
+        data = api.get_keystats("BBCA", 10)
         pbv = None
         pe = None
         

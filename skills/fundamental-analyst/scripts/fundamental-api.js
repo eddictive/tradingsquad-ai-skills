@@ -26,7 +26,7 @@ if (require.main === module) {
     const api = new FundamentalAPIClient();
     try {
       await api.login();
-      const data = await api.getKeyStats("BBCA", 1);
+      const data = await api.getKeyStats("BBCA", 10);
       // Example of extracting PBV and PE
       let pbv = null;
       let pe = null;

@@ -22,7 +22,7 @@ For financial data, utilize either `fundamental-api.py` or `fundamental-api.js` 
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `fundamental-api.js` or `fundamental-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/fundamental-analyst/scripts/`).
 3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need. Example:
-   `node -e "const { FundamentalAPIClient } = require('./.agents/skills/fundamental-analyst/scripts/fundamental-api.js'); (async () => { const api = new FundamentalAPIClient(); await api.login(); console.log(JSON.stringify(await api.getKeyStats('BBCA', 1))); })()"`
+   `node -e "const { FundamentalAPIClient } = require('./.agents/skills/fundamental-analyst/scripts/fundamental-api.js'); (async () => { const api = new FundamentalAPIClient(); await api.login(); console.log(JSON.stringify(await api.getKeyStats('BBCA', 10))); })()"`
 
 ## getKeyStats(ticker)
 Retrieves a massive array of financial ratios. 
