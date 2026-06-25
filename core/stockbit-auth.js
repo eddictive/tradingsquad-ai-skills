@@ -1,95 +1,129 @@
 const fs = require('fs');
 const path = require('path');
 
-function loadEnv() {
-  const envPath = path.join(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
-    const content = fs.readFileSync(envPath, 'utf-8');
-    content.split('\n').forEach(line => {
-      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-      if (match) {
-        const key = match[1];
-        let value = match[2] || '';
-        if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-        if (!process.env[key]) process.env[key] = value;
-      }
-    });
-  }
-}
-loadEnv();
-
 class StockbitClient {
-  constructor(username, password) {
-    this.username = username || process.env.STOCKBIT_USERNAME;
-    this.password = password || process.env.STOCKBIT_PASSWORD;
-    this.baseUrl = "https://stockbit.com";
+  constructor() {
     this.exodusUrl = "https://exodus.stockbit.com";
     this.tokenFile = path.join(__dirname, "../.stockbit_token.json");
     
     this.accessToken = null;
+    this.refreshToken = null;
+    this.accessExpiredAt = null;
+    this.refreshExpiredAt = null;
+
     this.headers = {
-      "User-Agent": "Mozilla/5.0",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       "Accept": "application/json",
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Origin": "https://stockbit.com",
+      "Referer": "https://stockbit.com/"
     };
   }
 
-  async _loadCachedToken() {
-    if (fs.existsSync(this.tokenFile)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(this.tokenFile, 'utf8'));
-        if (data.access_token) {
-          this.accessToken = data.access_token;
-          this.headers["Authorization"] = `Bearer ${this.accessToken}`;
-          try {
-            const res = await fetch(`${this.exodusUrl}/emitten/BBCA/info`, { headers: this.headers });
-            if (!res.ok) throw new Error("Expired");
-            return true;
-          } catch (e) {
-            this.accessToken = null;
-            delete this.headers["Authorization"];
-          }
-        }
-      } catch (e) {}
+  _isExpired(isoDateString) {
+    if (!isoDateString) return true;
+    const expiry = new Date(isoDateString).getTime();
+    const now = Date.now();
+    // Expired if within 5 minutes of expiration
+    return (expiry - now) < (5 * 60 * 1000);
+  }
+
+  _saveToken(access, refresh) {
+    const data = {
+      access_token: access.token,
+      access_expired_at: access.expired_at || access.expires_at,
+      refresh_token: refresh.token,
+      refresh_expired_at: refresh.expired_at || refresh.expires_at
+    };
+    fs.writeFileSync(this.tokenFile, JSON.stringify(data, null, 2));
+    this.accessToken = data.access_token;
+    this.refreshToken = data.refresh_token;
+    this.accessExpiredAt = data.access_expired_at;
+    this.refreshExpiredAt = data.refresh_expired_at;
+    this.headers["Authorization"] = `Bearer ${this.accessToken}`;
+  }
+
+  async _refreshAccessToken() {
+    if (!this.refreshToken || this._isExpired(this.refreshExpiredAt)) {
+      throw new Error("Refresh token is missing or expired. Please login manually to Stockbit again and grab a new token.");
     }
-    return false;
+
+    console.log("🔄 Access token expired. Refreshing token via exodus...");
+    const refreshHeaders = { ...this.headers };
+    refreshHeaders["Authorization"] = `Bearer ${this.refreshToken}`;
+    
+    const res = await fetch(`${this.exodusUrl}/login/refresh`, {
+      method: 'POST',
+      headers: refreshHeaders
+    });
+
+    if (!res.ok) {
+      throw new Error(`Token refresh failed with HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+    if (!json.data || !json.data.access || !json.data.refresh) {
+      throw new Error("Invalid response format during token refresh.");
+    }
+
+    this._saveToken(json.data.access, json.data.refresh);
+    return true;
+  }
+
+  async _loadCachedToken() {
+    if (!fs.existsSync(this.tokenFile)) return false;
+
+    try {
+      let content = fs.readFileSync(this.tokenFile, 'utf8').trim();
+      
+      // Auto-decode URL-encoded cookie string if user pasted it directly
+      if (content.startsWith('%7B') || content.includes('%22')) {
+        content = decodeURIComponent(content);
+      }
+      
+      const data = JSON.parse(content);
+      
+      // Auto-migrate raw JSON payload from LocalStorage (if provided by user)
+      if (data.state && data.state.access && data.state.refresh) {
+         this._saveToken(data.state.access, data.state.refresh);
+         return true;
+      }
+      
+      if (!data.access_token) return false;
+
+      this.accessToken = data.access_token;
+      this.refreshToken = data.refresh_token;
+      this.accessExpiredAt = data.access_expired_at;
+      this.refreshExpiredAt = data.refresh_expired_at;
+      this.headers["Authorization"] = `Bearer ${this.accessToken}`;
+
+      if (this._isExpired(this.accessExpiredAt)) {
+        await this._refreshAccessToken();
+      }
+      return true;
+    } catch (e) {
+      this.accessToken = null;
+      delete this.headers["Authorization"];
+      throw new Error(`Failed to load or refresh token: ${e.message}`);
+    }
   }
 
   async login() {
     if (await this._loadCachedToken()) return true;
-    if (!this.username || !this.password) throw new Error("Username/password required.");
 
-    try {
-      const res1 = await fetch(`${this.baseUrl}/login`, { headers: this.headers });
-      const cookies = res1.headers.get("set-cookie");
-      if (cookies) {
-        const match = cookies.match(/XSRF-TOKEN=([^;]+)/);
-        if (match) {
-          this.headers["X-XSRF-TOKEN"] = decodeURIComponent(match[1]);
-          this.headers["Cookie"] = `XSRF-TOKEN=${match[1]}`;
-        }
-      }
-    } catch(e) {}
-
-    const payload = { username: this.username, password: this.password };
-    const response = await fetch(`${this.baseUrl}/api/login/email`, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    if (response.ok && data.message === "You have been successfully logged in") {
-      this.accessToken = data.data.access.token;
-      this.headers["Authorization"] = `Bearer ${this.accessToken}`;
-      fs.writeFileSync(this.tokenFile, JSON.stringify({ access_token: this.accessToken }));
-      return true;
-    }
-    throw new Error(`Login failed: ${data.message || response.statusText}`);
+    const errorMsg = `🚨 NO STOCKBIT TOKEN FOUND OR INVALID!
+Please log in to Stockbit on your web browser, open Developer Tools (F12) -> Application -> Local Storage.
+Look for the auth object and copy the entire JSON.
+Paste it into: ${path.resolve(this.tokenFile)}`;
+    
+    console.error(errorMsg);
+    throw new Error("Authentication required.");
   }
 
   async _getExodus(endpoint, params = {}) {
-    if (!this.accessToken) await this.login();
+    if (!this.accessToken || this._isExpired(this.accessExpiredAt)) {
+      await this.login();
+    }
     const url = new URL(`${this.exodusUrl}${endpoint}`);
     Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
     const response = await fetch(url.toString(), { headers: this.headers });
@@ -98,15 +132,14 @@ class StockbitClient {
   }
 }
 
-// Allow standalone execution to verify auth
 if (require.main === module) {
   (async () => {
     const client = new StockbitClient();
     try {
       await client.login();
-      console.log("✅ Stockbit Shared Authentication Successful! Token is cached.");
+      console.log("✅ Stockbit BYOT Authentication Successful! Your token is valid.");
     } catch (e) {
-      console.error(`❌ Stockbit Authentication Failed: ${e.message}`);
+      console.error(`❌ ${e.message}`);
     }
   })();
 }

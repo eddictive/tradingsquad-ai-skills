@@ -13,15 +13,21 @@ The `institutional-api` and `technical-api` scripts are built to run universally
 - **Option A (Python):** `Python 3.9+` and run `pip install requests`
 - **Option B (JavaScript):** `Node.js 18+` or `Bun` (Zero external dependencies. It uses native `fetch` and built-in `.env` parsing).
 
-### Environment Variables
-For the API mode to fetch OHLCV, Orderbooks, and Broker flows, you must configure your Stockbit credentials. Create a `.env` file in the root directory (you can duplicate the `.env.example` file):
+### Environment Variables & Authentication
+Stockbit heavily protects its login endpoints. To bypass CAPTCHAs and bot protection, this framework uses a **"Bring Your Own Token" (BYOT)** architecture.
 
-```env
-STOCKBIT_USERNAME=your_email@domain.com
-STOCKBIT_PASSWORD=your_password
+1. Log into your Stockbit account on your web browser (e.g., `stockbit.com/stream`).
+2. Open Developer Tools (F12) -> Go to the **Application** tab.
+3. On the left sidebar, expand **Cookies** and click on `https://stockbit.com`.
+4. In the table, look for the row where the Name is **`credentialStorage`**.
+5. Copy the entire raw text from the **Value** column (it usually starts with `%22state%22...` or `{"state"...`).
+6. Create a `.stockbit_token.json` file in the root of your project directory and paste the exact copied string as-is:
+
+```json
+{"state":{"access":{"token":"eyJhbGci...
 ```
 
-*(Note: Auth is automatically managed by the `core/stockbit_auth` module which will intelligently save a `.stockbit_token.json` file on success).*
+*(Note: Do not worry if the copied text is URL-encoded. The internal API Client will automatically intercept it on the first run, extract both the `access_token` and `refresh_token`, and cleanly format the file to support Auto-Rotation!)*
 
 ---
 

@@ -19,8 +19,8 @@ class TechnicalAPIClient(StockbitClient):
         """Daily OHLCV Data."""
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        params = {"from": start_date.strftime("%Y-%m-%d"), "to": end_date.strftime("%Y-%m-%d"), "limit": 0}
-        return self._get_exodus(f"/chartbit/{ticker}/price/daily", params=params).get("data", [])
+        params = {"from": end_date.strftime("%Y-%m-%d"), "to": start_date.strftime("%Y-%m-%d"), "limit": 0}
+        return self._get_exodus(f"/chartbit/{ticker}/price/daily", params=params).get("data", {}).get("chartbit", [])
 
     def _resample_ohlcv(self, candles: list, target_minutes: int) -> list:
         if not candles: return []
@@ -76,8 +76,8 @@ class TechnicalAPIClient(StockbitClient):
         end_ts = int(datetime.now().timestamp())
         start_ts = int((datetime.now() - timedelta(days=days)).timestamp())
         
-        params = {"from": start_ts, "to": end_ts, "limit": 0, "minutes_multiplier": 1}
-        candles = self._get_exodus(f"/chartbit/{ticker}/price/intraday", params=params).get("data", [])
+        params = {"from": end_ts, "to": start_ts, "limit": 0, "minutes_multiplier": 1}
+        candles = self._get_exodus(f"/chartbit/{ticker}/price/intraday", params=params).get("data", {}).get("chartbit", [])
         
         if target_minutes == 1: return candles
         return self._resample_ohlcv(candles, target_minutes)

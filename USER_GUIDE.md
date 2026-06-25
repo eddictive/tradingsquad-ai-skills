@@ -27,12 +27,11 @@ Start your CLI inside the project directory and simply ask the lead analyst:
 
 Because multiple agents run parallel scripts, Authentication is managed globally by the **`core/`** module.
 
-You **do not** need to ask the AI to log in. The moment an Agent runs `institutional-api` or `technical-api`, the script will ping the `core/stockbit-auth` module. 
-- If you are authenticated, it uses the cached `.stockbit_token.json`.
-- If the token is expired, it uses your `.env` to silently fetch a new one without interrupting the AI's workflow.
+You **do not** need to ask the AI to log in. The moment an Agent runs `institutional-api` or `technical-api`, the script will automatically read your `.stockbit_token.json` file.
+- **Auto-Rotation Built-in**: If your `access_token` naturally expires during a session, the background API Client will seamlessly use your `refresh_token` to fetch a new one and overwrite your `.stockbit_token.json` automatically! It will only explicitly instruct you to re-login if the 7-day refresh token dies.
 
-### Manual Authentication
-If you wish to log in manually to seed the token before starting an AI session, you can run the core module independently in your terminal:
+### Manual Verification
+If you want to test if your pasted token works before starting an AI session, you can run the core module independently in your terminal:
 
 **Python Runtime:**
 ```bash

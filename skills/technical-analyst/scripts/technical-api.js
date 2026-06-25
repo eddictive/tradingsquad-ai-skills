@@ -11,12 +11,12 @@ class TechnicalAPIClient extends StockbitClient {
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - days);
     const params = {
-      from: startDate.toISOString().split('T')[0],
-      to: endDate.toISOString().split('T')[0],
+      from: endDate.toISOString().split('T')[0],
+      to: startDate.toISOString().split('T')[0],
       limit: 0
     };
     const data = await this._getExodus(`/chartbit/${ticker}/price/daily`, params);
-    return data.data || [];
+    return data.data?.chartbit || [];
   }
 
   _resampleOhlcv(candles, targetMinutes) {
@@ -71,10 +71,10 @@ class TechnicalAPIClient extends StockbitClient {
 
     const endTs = Math.floor(Date.now() / 1000);
     const startTs = endTs - (days * 24 * 60 * 60);
-    const params = { from: startTs, to: endTs, limit: 0, minutes_multiplier: 1 };
+    const params = { from: endTs, to: startTs, limit: 0, minutes_multiplier: 1 };
     
     const rawData = await this._getExodus(`/chartbit/${ticker}/price/intraday`, params);
-    const candles = rawData.data || [];
+    const candles = rawData.data?.chartbit || [];
     if (targetMinutes === 1) return candles;
     return this._resampleOhlcv(candles, targetMinutes);
   }
