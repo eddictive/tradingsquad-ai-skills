@@ -80,6 +80,12 @@ Tell the `technical-analyst` to analyze the ticker and return the "Quant Score" 
 For institutional data, utilize either `institutional-api.py` or `institutional-api.js` in the `scripts/` directory to retrieve live data. 
 *Note: The scripts handle Stockbit authentication and token caching automatically via `.stockbit_token.json` and `.env`, so you do not need to manually authenticate unless a fresh login is required.*
 
+**CRITICAL RULES FOR SCRIPT USAGE**:
+1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
+2. You MUST use the existing `institutional-api.js` or `institutional-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/institutional-analyst/scripts/`).
+3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need. Example:
+   `node -e "const { InstitutionalAPIClient } = require('./.agents/skills/institutional-analyst/scripts/institutional-api.js'); (async () => { const api = new InstitutionalAPIClient(); await api.login(); console.log(await api.getBrokerSummary('BBCA')); })()"`
+
 ## get_orderbook()
 Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength.
 Calculate Bid Ask Ratio = Total Bid Lot / Total Offer Lot.
