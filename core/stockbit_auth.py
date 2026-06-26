@@ -143,6 +143,14 @@ class StockbitClient:
         response.raise_for_status()
         return response.json()
 
+    def _post_exodus(self, endpoint, payload=None):
+        if not self.access_token or self._is_expired(self.access_expired_at):
+            self.login()
+        url = f"{self.exodus_url}{endpoint}"
+        response = self.session.post(url, json=payload)
+        response.raise_for_status()
+        return response.json()
+
 if __name__ == "__main__":
     client = StockbitClient()
     try:

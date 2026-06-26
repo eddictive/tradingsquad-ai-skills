@@ -140,6 +140,19 @@ Paste it into: ${path.resolve(this.tokenFile)}`;
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
     return response.json();
   }
+
+  async _postExodus(endpoint, payload = {}) {
+    if (!this.accessToken || this._isExpired(this.accessExpiredAt)) {
+      await this.login();
+    }
+    const response = await fetch(`${this.exodusUrl}${endpoint}`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    return response.json();
+  }
 }
 
 if (require.main === module) {
