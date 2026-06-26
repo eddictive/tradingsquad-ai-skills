@@ -14,16 +14,43 @@ Start your CLI inside the project directory and simply ask the lead analyst:
 > *"Act as the Institutional Analyst. Analyze the BBCA ticker. Determine the Wyckoff phase based on order flow, and grab the Quant Score from the technical analyst."*
 
 ### What Happens Under The Hood?
-1. The **`institutional-analyst`** reads your prompt and sees it requires OHLCV metrics and Quant Scores.
-2. It **delegates** the charting task by invoking the **`technical-analyst`**.
+1. The **`institutional-analyst`** reads your prompt and sees it requires OHLCV metrics, Quant Scores, and Fundamental data.
+2. It **delegates** the charting task by invoking the **`technical-analyst`** and the valuation task by invoking the **`fundamental-analyst`**.
 3. The `technical-analyst` runs `technical-api.js` to fetch Intraday/Daily candlestick data and groups the data into technical buckets (e.g., MA20 crossing MA50, RSI values).
-4. The `technical-analyst` returns a standardized **Quant Score** back to the `institutional-analyst`.
-5. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers (Bandarmologi).
-6. The Agent synthesizes the data and delivers the final Probability Report with an exact Entry Zone and Invalidation Stop Loss.
+4. The `fundamental-analyst` runs `fundamental-api.js` to fetch KeyStats (PBV, PE) and calculates a Valuation Score.
+5. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers using a **Multi-Timeframe approach** (e.g., comparing Intraday vs 1-Month).
+6. The Agent synthesizes the data into **Quant Score 2.0** (Technical 50%, Fundamental 20%, Bandarmology 30%) and delivers the final Probability Report with an exact Entry Zone and Invalidation Stop Loss.
 
 ---
 
-## Authentication & Core Module
+## 🕒 The Multi-Timeframe Bandarmology Matrix
+
+To get the most accurate institutional reading, you should explicitly prompt the AI to compare different timeframes based on the stock's current phase:
+
+- **For Bottoming Stocks (Long-term Sideways)**:
+  > *"Analyze ADRO. Compare the broker summary for the last 3 months against the last 7 days."*
+- **For Swing Trading (Uptrending/Correction)**:
+  > *"Analyze BBCA. Compare the 1-month accumulation with today's intraday broker flow to spot shakeouts."*
+
+By providing these prompts, the `institutional-analyst` will seamlessly pass the correct `period` arguments to the API and reveal hidden "Cornering" or "Fakeout" operations by massive institutions!
+
+---
+
+## 🚨 Market Scanner: Live Intraday Draggers & Lifters
+
+Stockbit's official Net Foreign Flow and Market Mover endpoints are heavily delayed until End of Day (EOD). To analyze what is driving the IHSG composite index *during active trading hours* (09:00 - 16:00 WIB), **DO NOT** ask for EOD data.
+
+Instead, ask the agent to run the **Live Draggers** scan:
+
+> *"Act as the Market Scanner. IHSG is dropping hard in Session 1 right now. Run the livedraggers script to find out which of the 16 Big Caps are pulling the index down, and which ones are acting as lifters."*
+
+1. The **`market-scanner`** agent will invoke the `livedraggers` action.
+2. The script computes the real-time percent change of 16 heavily-weighted Free Float Giants (BBCA, BMRI, BBNI, AMMN, BREN, etc.) starting exactly from today's opening bell.
+3. It cleanly separates the output into **The Lifters 🚀** (Green Zone) and **The Draggers 🩸** (Red Zone), giving you the exact cause of intraday IHSG volatility.
+
+---
+
+## 🔐 Authentication & Core Module
 
 Because multiple agents run parallel scripts, Authentication is managed globally by the **`core/`** module.
 

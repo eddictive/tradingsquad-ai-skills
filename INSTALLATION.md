@@ -76,10 +76,11 @@ Claude Code supports modular custom commands via slash mapping.
 
 ### OpenAI Codex CLI 🤖
 The automated installer will seamlessly create the `.codex/config.toml`, write the `AGENTS.md` manifest, and automatically copy all skill directories into `.codex/skills/`.
+*Note: The installer automatically appends the Codex-specific instructions to the Master `AGENTS.md` rules without overwriting the core trading context.*
 - **Install:** Consult OpenAI Codex official documentation for the latest release.
-- **Invoke:** The Codex Agent automatically parses `AGENTS.md` on startup. Mention `@institutional-analyst` or `@technical-analyst` in your prompt.
+- **Invoke:** The Codex Agent automatically parses `AGENTS.md` at the project root. Mention `@institutional-analyst` or `@technical-analyst` in your prompt.
 
 ### Grok XAi CLI (Grok Build) 🧠
-Grok reads project-specific configurations mapped heavily in `.grok/grok.md`.
+Grok reads project-specific configurations mapped heavily in `.grok/grok.md` and `.grok/AGENTS.md`.
 - **Install:** `curl -fsSL https://x.ai/cli/install.sh | bash`
 - **Invoke:** `grok inspect` to load skills, then ask natively in chat.

@@ -6,12 +6,13 @@ By equipping your AI agents with these skills, you enable them to perform high-l
 
 ## 🚀 Features
 
-- **Multi-Agent Collaboration**: Skills autonomously delegate tasks to each other. For example, the `institutional-analyst` seamlessly queries the `technical-analyst` for Quant Scores and Chart OHLCV.
+- **Multi-Agent Collaboration**: Skills autonomously delegate tasks to each other. For example, the `institutional-analyst` seamlessly queries the `technical-analyst` and `fundamental-analyst` to build a unified **Quant Score 2.0**.
 - **Dual Language Runtimes**: Every API workflow is natively written in **Python** (via `requests`) and **JavaScript** (via native `fetch`), supporting Node.js and Bun environments with zero npm dependencies.
 - **Shared Core Authentication**: A centralized `core/` module handles all Stockbit API logins, `XSRF-TOKEN` tracking, and secure `.stockbit_token.json` caching globally across all agents.
-- **Institutional Analyst**: Performs Wyckoff market structure evaluation, tape reading, broker flow/bandarmology, and order book intelligence.
-- **Technical Analyst**: Processes raw OHLCV intraday/daily data, creates O(N) timeframe resampled groupings (5m, 15m, 1h), and outputs Trend and Momentum Quant Scores.
-- **Fundamental Analyst**: Evaluates intrinsic asset values using financial statements, macroeconomic indicators, and market sentiment.
+- **Institutional Analyst**: Performs Wyckoff market structure evaluation, tape reading, order book intelligence, and **Multi-Timeframe Bandarmology** (comparing Intraday vs 1-Month broker flow to detect cornering and shakeouts).
+- **Market Scanner**: Scans the market for accumulation/rebound patterns. Features the powerful **Live Intraday Draggers** (`livedraggers`) engine which bypasses End-of-Day API delays by tracking real-time price shifts of 16 specific Free-Float Big Caps (Lifters & Draggers).
+- **Technical Analyst**: Processes raw OHLCV data using a **Hybrid Windowing** approach. It calculates smooth MAs/RSI using 3-day history while strictly isolating current-day data (09:00 - 16:00 WIB) for accurate daily VWAP and High/Low computations.
+- **Fundamental Analyst**: Fetches Stockbit KeyStats & Financial Reports to calculate a concrete **Valuation Score** (PBV, PE, Yield) for detecting deep value setups vs value traps.
 
 ## 📂 Project Structure
 
@@ -20,13 +21,15 @@ tradingsquad-ai-skills/
 ├── README.md           
 ├── INSTALLATION.md     # Automated CLI installation instructions
 ├── USER_GUIDE.md       # Multi-agent workflow and prompting guide
-├── skills.json         # Skill registry mapping for Antigravity
+├── AGENTS.md           # Master Trading Context & Data Integrity Rules
+├── skills.json         # Skill registry mapping for AI auto-discovery
 ├── core/
 │   ├── stockbit_auth.py    # Shared Auth client (Python)
 │   └── stockbit-auth.js    # Shared Auth client (JS/Node)
 └── skills/
     ├── fundamental-analyst/  
     ├── institutional-analyst/
+    ├── market-scanner/       # Real-time intraday draggers & lifters
     │   ├── SKILL.md
     │   └── scripts/
     │       ├── institutional-api.py 
@@ -47,4 +50,4 @@ To get started with configuring and using TradingSquad AI Skills, please refer t
 
 ## ⚙️ Core Philosophy
 
-These skills force the LLM to output probability-based scenarios rather than certainties. Every analysis provides an **Entry Zone**, **Stop Loss**, **Risk-Reward Ratio**, and a clear **Invalidation Level**.
+These skills force the LLM to output probability-based scenarios rather than certainties. Every analysis relies on **Quant Score 2.0**—a 100-point robust metric scoring Technicals (50%), Fundamentals (20%), and Bandarmology (30%). Finally, every output provides an exact **Entry Zone**, **Stop Loss**, **Risk-Reward Ratio**, and a clear **Invalidation Level**.
