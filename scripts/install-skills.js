@@ -49,14 +49,16 @@ if (!isLocalSource) {
 const analysts = [
   'institutional-analyst',
   'technical-analyst',
-  'fundamental-analyst'
+  'fundamental-analyst',
+  'market-scanner',
+  'sentiment-analyst'
 ];
 
 // Target Paths
 const targets = {
   antigravity: {
     local: path.join(userProjectDir, '.agents', 'skills'),
-    global: path.join(os.homedir(), '.gemini', 'antigravity-cli', 'skills')
+    global: path.join(os.homedir(), '.gemini', 'config', 'skills')
   },
   claude: {
     local: path.join(userProjectDir, '.claude', 'skills'),
@@ -95,6 +97,46 @@ function copyFolderSync(from, to) {
       copyFolderSync(fromPath, toPath);
     } else {
       fs.copyFileSync(fromPath, toPath);
+    }
+  }
+}
+
+function installAgentsMd(destDir) {
+  const rootAgentsMd = path.join(__dirname, '..', 'AGENTS.md');
+  const targetAgentsMd = path.join(destDir, 'AGENTS.md');
+  
+  // Also check userProjectDir if not running from local clone
+  const fallbackAgentsMd = path.join(userProjectDir, 'AGENTS.md');
+  
+  let sourceMd = null;
+  if (fs.existsSync(rootAgentsMd)) sourceMd = rootAgentsMd;
+  else if (fs.existsSync(fallbackAgentsMd)) sourceMd = fallbackAgentsMd;
+
+  if (sourceMd) {
+    // Prevent copying to itself
+    if (path.resolve(sourceMd) !== path.resolve(targetAgentsMd)) {
+      ensureDir(destDir);
+      fs.copyFileSync(sourceMd, targetAgentsMd);
+      console.log(`   ✅ Copied master AGENTS.md rules`);
+    }
+  }
+}
+
+function installSkillsJson(destDir) {
+  const rootSkillsJson = path.join(__dirname, '..', 'skills.json');
+  const targetSkillsJson = path.join(destDir, 'skills.json');
+  
+  const fallbackSkillsJson = path.join(userProjectDir, 'skills.json');
+  
+  let sourceJson = null;
+  if (fs.existsSync(rootSkillsJson)) sourceJson = rootSkillsJson;
+  else if (fs.existsSync(fallbackSkillsJson)) sourceJson = fallbackSkillsJson;
+
+  if (sourceJson) {
+    if (path.resolve(sourceJson) !== path.resolve(targetSkillsJson)) {
+      ensureDir(destDir);
+      fs.copyFileSync(sourceJson, targetSkillsJson);
+      console.log(`   ✅ Copied skills.json config`);
     }
   }
 }
@@ -206,11 +248,16 @@ async function installSkillsFor(clis, isGlobal) {
     
     // Copy Core Module
     if (coreSrcDir && fs.existsSync(coreSrcDir)) {
-      const coreDest = isGlobal ? path.join(os.homedir(), '.gemini', 'antigravity-cli', 'core') : path.join(userProjectDir, '.agents', 'core');
+      const coreDest = isGlobal ? path.join(os.homedir(), '.gemini', 'config', 'core') : path.join(userProjectDir, '.agents', 'core');
       ensureDir(coreDest);
       copyFolderSync(coreSrcDir, coreDest);
       console.log(`   ✅ Loaded core module`);
     }
+    
+    // Copy Master Rules & Config
+    const configDest = isGlobal ? path.join(os.homedir(), '.gemini', 'config') : path.join(userProjectDir, '.agents');
+    installAgentsMd(configDest);
+    installSkillsJson(configDest);
   }
 
   if (clis.includes('claude')) {
@@ -237,6 +284,9 @@ async function installSkillsFor(clis, isGlobal) {
       copyFolderSync(coreSrcDir, coreDest);
       console.log(`   ✅ Loaded core module`);
     }
+
+    // Copy Master Rules
+    installAgentsMd(isGlobal ? path.join(os.homedir(), '.claude') : path.join(userProjectDir, '.claude'));
   }
 
   if (clis.includes('codex')) {
@@ -275,7 +325,7 @@ async function installSkillsFor(clis, isGlobal) {
       }
 
       const agentsMdPath = path.join(userProjectDir, 'AGENTS.md');
-      const agentsContent = `# Project Agents & Guidelines (Codex CLI) 🤖
+      const agentsContent = `\n\n# Project Agents & Guidelines (Codex CLI) 🤖
 
 This file registers the active AI Analyst guidelines for the OpenAI Codex CLI.
 
@@ -288,8 +338,16 @@ This file registers the active AI Analyst guidelines for the OpenAI Codex CLI.
 ## Operational Standards
 All analysis must respect the specifications detailed under the respective \`SKILL.md\` and \`scripts/\` directories.
 `;
-      fs.writeFileSync(agentsMdPath, agentsContent, 'utf8');
-      console.log(`   ✅ Created/Updated root AGENTS.md`);
+      if (fs.existsSync(agentsMdPath)) {
+        const existing = fs.readFileSync(agentsMdPath, 'utf8');
+        if (!existing.includes('Project Agents & Guidelines (Codex CLI)')) {
+          fs.appendFileSync(agentsMdPath, agentsContent, 'utf8');
+          console.log(`   ✅ Appended Codex rules to root AGENTS.md`);
+        }
+      } else {
+        fs.writeFileSync(agentsMdPath, agentsContent.trim(), 'utf8');
+        console.log(`   ✅ Created root AGENTS.md for Codex`);
+      }
     }
   }
 
@@ -313,6 +371,9 @@ All analysis must respect the specifications detailed under the respective \`SKI
       copyFolderSync(coreSrcDir, coreDest);
       console.log(`   ✅ Loaded core module`);
     }
+    
+    // Copy Master Rules
+    installAgentsMd(isGlobal ? path.join(os.homedir(), '.grok') : path.join(userProjectDir, '.grok'));
 
     if (!isGlobal) {
       console.log(`🧠 Configuring for Grok XAi CLI...`);
