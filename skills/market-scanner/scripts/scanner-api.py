@@ -1,0 +1,106 @@
+import sys
+import json
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../core")))
+from stockbit_auth import StockbitClient
+
+class ScannerAPIClient(StockbitClient):
+    
+    def get_market_mover(self, mover_type="MOVER_TYPE_NET_FOREIGN_BUY"):
+        params = {
+            "mover_type": mover_type,
+            "filter_stocks": [
+                "FILTER_STOCKS_TYPE_MAIN_BOARD",
+                "FILTER_STOCKS_TYPE_DEVELOPMENT_BOARD"
+            ]
+        }
+        response = self._get_exodus("/order-trade/market-mover", params)
+        data = response.get("data", {}).get("mover_list", [])
+        
+        result = []
+        for m in data[:10]:
+            result.append({
+                "ticker": m["stock_detail"]["code"],
+                "price": m["price"],
+                "change_percent": f"{m['change']['percentage']:.2f}%",
+                "foreign_buy": m.get("net_foreign_buy", {}).get("formatted", "-"),
+                "value": m["value"]["formatted"]
+            })
+        return result
+
+    def get_top_stock(self, start_date, end_date, investor_type="INVESTOR_TYPE_FOREIGN"):
+        params = {
+            "start": start_date,
+            "end": end_date,
+            "investor_type": investor_type,
+            "market_type": "MARKET_TYPE_REGULER",
+            "value_type": "VALUE_TYPE_NET",
+            "page": 1
+        }
+        response = self._get_exodus("/order-trade/top-stock", params)
+        
+        top_buy = response.get("data", {}).get("top_buy", [])[:10]
+        top_sell = response.get("data", {}).get("top_sell", [])[:10]
+        
+        return {
+            "topBuy": [{"ticker": b["code"], "value": b["value"]["formatted"], "avg_price": b["average"]["formatted"]} for b in top_buy],
+            "topSell": [{"ticker": s["code"], "value": s["value"]["formatted"], "avg_price": s["average"]["formatted"]} for s in top_sell]
+        }
+
+    def run_screener(self, template="ACCUMULATION"):
+        if template == "ACCUMULATION":
+            payload = {
+                "name": "ISSI - Big Accumulation",
+                "description": "",
+                "save": "0",
+                "ordertype": "DESC",
+                "ordercol": 3,
+                "page": 1,
+                "universe": '{"scope":"idx","scopeID":"558","name":"IHSG"}',
+                "filters": '[{"type":"basic","item1":14400,"item1name":"Bandar Accum/Dist","operator":">","item2":"20","item2name":"","multiplier":"0"},{"type":"basic","item1":13620,"item1name":"Value","operator":">","item2":"3000000000","item2name":"","multiplier":"0"},{"type":"basic","item1":2661,"item1name":"Price","operator":">=","item2":"50","item2name":"","multiplier":"0"}]',
+                "sequence": "14400,13620,2661",
+                "screenerid": "0",
+                "type": "TEMPLATE_TYPE_CUSTOM"
+            }
+        else:
+            payload = {
+                "name": "Price Momentum (Rebound Hunter)",
+                "description": "",
+                "save": "0",
+                "ordertype": "DESC",
+                "ordercol": 2,
+                "page": 1,
+                "universe": '{"scope":"idx","scopeID":"558","name":"ISSI"}',
+                "filters": '[{"type":"basic","item1":16454,"item1name":"Value MA 20","operator":">","item2":"1000000000","item2name":"","multiplier":"0"},{"type":"compare","item1":2661,"item1name":"Price","operator":">=","multiplier":"1","item2":12460,"item2name":"Price MA 50"},{"type":"basic","item1":12148,"item1name":"Current PE Ratio (Annualised)","operator":">","item2":"0","multiplier":""}]',
+                "sequence": "16454,2661,12460,12148",
+                "screenerid": "0",
+                "type": "TEMPLATE_TYPE_CUSTOM"
+            }
+
+        response = self._post_exodus("/screener/templates", payload)
+        calcs = response.get("data", {}).get("calcs", [])[:10]
+        
+        result = []
+        for c in calcs:
+            res_obj = {"ticker": c["company"]["symbol"]}
+            for r in c["results"]:
+                res_obj[r["item"]] = r["display"]
+            result.append(res_obj)
+            
+        return result
+
+if __name__ == "__main__":
+    api = ScannerAPIClient()
+    action = sys.argv[1] if len(sys.argv) > 1 else "mover"
+    
+    if action == "mover":
+        data = api.get_market_mover()
+        print("Top Net Foreign Buy:", json.dumps(data, indent=2))
+    elif action == "topstock":
+        data = api.get_top_stock("2026-06-01", "2026-06-25")
+        print("Top Foreign Stock:", json.dumps(data, indent=2))
+    elif action == "screener":
+        template = sys.argv[2] if len(sys.argv) > 2 else "ACCUMULATION"
+        data = api.run_screener(template)
+        print(f"Screener [{template}]:", json.dumps(data, indent=2))
