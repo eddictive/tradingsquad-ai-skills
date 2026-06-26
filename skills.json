@@ -2,6 +2,8 @@
   "entries": [
     { "path": "skills/technical-analyst" },
     { "path": "skills/fundamental-analyst" },
-    { "path": "skills/institutional-analyst" }
+    { "path": "skills/institutional-analyst" },
+    { "path": "skills/market-scanner" },
+    { "path": "skills/sentiment-analyst" }
   ]
 }
