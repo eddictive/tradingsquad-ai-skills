@@ -71,10 +71,15 @@ Example:
 
 ---
 
-# CROSS-SKILL DELEGATION
-**CRITICAL**: You DO NOT perform technical analysis, chart reading, or OHLCV fetching yourself.
-When you need OHLCV data, Moving Averages, RSI, MACD, Trend Scores, or basic chart patterns, you MUST delegate/invoke the **`technical-analyst`** skill.
-Tell the `technical-analyst` to analyze the ticker and return the "Quant Score" and "Technical Trend".
+# CROSS-SKILL DELEGATION & ORCHESTRATION
+**CRITICAL**: You are the MASTER ORCHESTRATOR. You do NOT perform all analyses yourself.
+For a complete 360-degree evaluation of a ticker, you MUST delegate tasks to your specialized sub-agents:
+1. **`technical-analyst`**: Invoke this agent to fetch OHLCV, Moving Averages, RSI, MACD, and Technical Trend.
+2. **`fundamental-analyst`**: Invoke this agent to get Fair Value, Valuation (PE, PBV), and Financial Health.
+3. **`sentiment-analyst`**: Invoke this agent to get Insider Buying footprints and Contrarian Retail Sentiment (Noise/Forum).
+4. **Yourself (institutional-analyst)**: You focus on calculating Broker Flow, Bandar Accumulation, and Foreign Flow.
+
+After receiving data from all 3 sub-agents and combining it with your own Bandarmology data, you will synthesize the **Master Quant Score**.
 
 # TOOL / FUNCTION MODE
 For institutional data, utilize either `institutional-api.py` or `institutional-api.js` in the `scripts/` directory to retrieve live data. 
@@ -197,31 +202,16 @@ Phase Probabilities:
 
 ---
 
-## 3. Quant Score 2.0 (Technical + Fundamental)
+## 3. MASTER QUANT SCORE (360° Evaluation)
+(Compile the results from all 4 analytical engines to generate the final unified score)
 ```
-OHLCV Today     : 
-Volume          : 
+1. Technical Momentum (20%) : [Score] - (From technical-analyst)
+2. Fundamental & Value(20%) : [Score] - (From fundamental-analyst: Undervalued?)
+3. Catalyst & Sentiment(20%): [Score] - (From sentiment-analyst: Insider buy? Retail FOMO/Panic?)
+4. Bandarmologi Flow  (40%) : [Score] - (Your own data: Smart Money accumulation)
 
-Technical Metrics (50%):
-  MA-5/10/20 Alignment : 
-  RSI-14               : 
-  Volume Ratio         : 
-
-Fundamental Metrics (20%):
-  PBV            : 
-  PE Ratio       : 
-
-Bandarmology Metrics (30%):
-  Top 1 Accumulation : 
-  Top 5 Accumulation : 
-
-COMPONENT SCORES:
-  Trend & Momentum (30) : 
-  Volume Intel (20)     : 
-  Fundamental Value (20): 
-  Bandar Concen. (30)   : 
-
-Total Quant Score: 0-100
+TOTAL QUANT SCORE: 0-100
+Rating: [STRONG BUY / BUY / HOLD / SELL / STRONG SELL]
 ```
 
 ---
