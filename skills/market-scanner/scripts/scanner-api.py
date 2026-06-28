@@ -90,6 +90,53 @@ class ScannerAPIClient(StockbitClient):
             
         return result
 
+    def get_live_draggers(self):
+        import time
+        from datetime import datetime, timezone, timedelta
+        
+        giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO']
+        results = []
+        
+        end_ts = int(time.time())
+        start_ts = end_ts - (24 * 60 * 60)
+        
+        # WIB is UTC+7
+        wib_tz = timezone(timedelta(hours=7))
+        wib_date = datetime.now(wib_tz)
+        today_str = wib_date.strftime('%Y-%m-%d')
+        
+        for ticker in giants:
+            try:
+                params = {
+                    "from": end_ts,
+                    "to": start_ts,
+                    "limit": 0,
+                    "minutes_multiplier": 1
+                }
+                raw_data = self._get_exodus(f"/chartbit/{ticker}/price/intraday", params)
+                candles = raw_data.get("data", {}).get("chartbit", [])
+                
+                today_candles = [c for c in candles if c.get("datetime", "").startswith(today_str)]
+                
+                if today_candles:
+                    today_candles.sort(key=lambda x: x["unix_timestamp"])
+                    open_price = today_candles[0]["open"]
+                    close_price = today_candles[-1]["close"]
+                    change = ((close_price - open_price) / open_price) * 100
+                    results.append({
+                        "ticker": ticker,
+                        "open": open_price,
+                        "close": close_price,
+                        "changePercent": f"{change:.2f}%"
+                    })
+            except Exception:
+                pass
+                
+        lifters = sorted([r for r in results if float(r["changePercent"].replace('%', '')) >= 0], key=lambda x: float(x["changePercent"].replace('%', '')), reverse=True)
+        draggers = sorted([r for r in results if float(r["changePercent"].replace('%', '')) < 0], key=lambda x: float(x["changePercent"].replace('%', '')))
+        
+        return {"lifters": lifters, "draggers": draggers}
+
 if __name__ == "__main__":
     api = ScannerAPIClient()
     action = sys.argv[1] if len(sys.argv) > 1 else "mover"
@@ -104,3 +151,6 @@ if __name__ == "__main__":
         template = sys.argv[2] if len(sys.argv) > 2 else "ACCUMULATION"
         data = api.run_screener(template)
         print(f"Screener [{template}]:", json.dumps(data, indent=2))
+    elif action == "livedraggers":
+        data = api.get_live_draggers()
+        print("Live Big Caps Draggers:", json.dumps(data, indent=2))
