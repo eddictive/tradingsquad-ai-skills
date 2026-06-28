@@ -11,3 +11,14 @@
    - **If market is CLOSED** (weekend or public holiday): Do NOT attempt to run live scans or fetch today's intraday data. Instead, clearly inform the user: *"The IDX market is closed today ([day/date]). I cannot fetch live today's data."* Then proactively offer to analyze the **most recent trading day's** data instead (e.g., *"Would you like me to analyze the market from the last trading session on [last trading date]?"*).
    - **If market is OPEN** (active weekday): Proceed with the scan, but still respect the session-time rules in Rule 1 above (Pre-Open / Session 1 / Session 2 / Post-Close).
    - **If the script returns exit code 2 (UNVERIFIED)**: The holiday API was unreachable. Flag this to the user and ask them to confirm manually before proceeding.
+
+### Workspace Cleanliness & Temporary Files
+
+6. **Temporary File Management**: NEVER create temporary files (e.g., `.temp.json`, `.macro.json`, etc.) in the root directory of the workspace. If you need to pipe the output of a terminal command to a file for reading, you MUST create a `.data/temp/` directory (e.g., `mkdir -p .data/temp`) and place all temporary files inside it (e.g., `.data/temp/adro_macro.json`). This ensures the user's workspace remains clean and uncluttered.
+
+### Report Generation
+
+7. **Save Final Reports**: Whenever you generate a final analysis report for a specific ticker (whether it is Institutional, Fundamental, Sentiment, or Technical), you MUST also save a copy of the report as a markdown file in the `report/` directory in addition to outputting it to the terminal. 
+   - Ensure the directory exists (`mkdir -p report`).
+   - Use the naming convention `report/[TICKER]_[analysis_type]_analysis.md` (e.g., `report/ADRO_institutional_analysis.md` or `report/BBCA_sentiment_analysis.md`). 
+   - This ensures the user has a persistent historical record of your analysis.

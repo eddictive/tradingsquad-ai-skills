@@ -59,4 +59,6 @@ venv.bak/
 .grok/
 
 # Misc
+.data/
+report/
 ide-dev.md
