@@ -21,8 +21,16 @@ For sentiment data, utilize either `sentiment-api.py` or `sentiment-api.js` in t
 **CRITICAL RULES FOR SCRIPT USAGE**:
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `sentiment-api.js` or `sentiment-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/sentiment-analyst/scripts/`).
-3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need. Example:
-   `node -e "const { SentimentAPIClient } = require('./.agents/skills/sentiment-analyst/scripts/sentiment-api.js'); (async () => { const api = new SentimentAPIClient(); await api.login(); console.log(JSON.stringify(await api.getAggregatedSentiment('BBCA'), null, 2)); })()"`
+3. **Execution Examples**: Use the `run_command` tool to execute a one-liner to fetch what you need.
+   - For Stockbit Sentiment (Local):
+     `node -e "const { SentimentAPIClient } = require('./.agents/skills/sentiment-analyst/scripts/sentiment-api.js'); (async () => { const api = new SentimentAPIClient(); await api.login(); console.log(JSON.stringify(await api.getAggregatedSentiment('BBCA'), null, 2)); })()"`
+   - For Global & Macro News Catalysts:
+     `node .agents/skills/sentiment-analyst/scripts/macro-news.js all`
+     (or `python3 .agents/skills/sentiment-analyst/scripts/macro-news.py all`)
+
+## macro-news.js / macro-news.py
+Retrieves the latest top news headlines from Bloomberg, WSJ, Yahoo Finance, and CNBC (Global and Indonesia).
+Use this to detect major macroeconomic catalysts (e.g., FOMC, Fed rates, Geopolitics, Middle East conflicts affecting Oil & Gas, BOJ, index rebalancing).
 
 ## getAggregatedSentiment(ticker)
 Retrieves a filtered object containing:
@@ -35,10 +43,13 @@ Retrieves a filtered object containing:
 
 # ANALYSIS FRAMEWORK
 
-## PART 1 — CATALYST VS NOISE DETECTION
-Scan the aggregated data and classify the current narrative:
-*   **Bullish Catalyst**: Genuine growth news, earnings beat, large dividend, massive insider buying.
-*   **Bearish Catalyst**: Earnings miss, legal issues, massive insider selling.
+## PART 1 — MACRO & GLOBAL NARRATIVE
+First, run the `macro-news.py` script to detect the overarching global sentiment. Does a geopolitical tension (e.g., Middle East war) threaten oil prices and Indonesian fiscal stability? Is the Fed or BOJ changing interest rates? Determine if the macro environment provides a tailwind or headwind for the IDX (IHSG) and specific sectors (like Energy or Banking).
+
+## PART 2 — CATALYST VS NOISE DETECTION
+Scan the stock-specific aggregated data (from `sentiment-api.js`) and classify the narrative:
+*   **Bullish Catalyst**: Genuine growth news, earnings beat, large dividend, massive insider buying, positive macro tailwind.
+*   **Bearish Catalyst**: Earnings miss, legal issues, massive insider selling, negative macro headwind.
 *   **Noise/Trap (Crucial)**: Media pumping "good news" at the peak of a rally (often used for institutional distribution), or media spreading "bad news" after a long downtrend (often a shakeout for accumulation).
 
 ## PART 2 — CORPORATE ACTION AWARENESS
@@ -68,21 +79,24 @@ Media Hype Level  : Low / Medium / High / Extreme
 > [!WARNING] or [!TIP]
 > (Provide a 1-2 sentence core conclusion: Is the news confirming the trend, or is it a trap?)
 
-## 2. Key Catalysts & News
-(List 2-3 of the most impactful recent news items and explain their actual impact on the stock).
-- **[Date] - [Headline/Summary]**: [Impact Analysis]
+## 2. Macro & Geopolitical Catalysts
+(List 2-3 major global or domestic macro events from the macro news script. Explain how they impact the broader market or this specific sector.)
+- **[Source] - [Headline]**: [Impact Analysis on IHSG/Sector]
+
+## 3. Stock-Specific News
+(List 2-3 of the most impactful recent news items for this ticker and explain their actual impact).
 - **[Date] - [Headline/Summary]**: [Impact Analysis]
 
-## 3. Corporate Actions & Reports
+## 4. Corporate Actions & Reports
 (List any RUPS, dividends, or financial report releases. If none, state "No major corporate actions recently.")
 - 
 
-## 4. Insider Activity
+## 5. Insider Activity
 (Detail any insider buying/selling. If none, state "No significant insider activity detected.")
 - 
 
-## 5. Retail Sentiment (Contrarian Check)
+## 6. Retail Sentiment (Contrarian Check)
 (Summarize the mood from the 'ideas' stream. Are they euphoric, panicking, or bored? How does this contrast with insider/institutional action?)
 
-## 6. Strategic Conclusion (The "Why")
+## 7. Strategic Conclusion (The "Why")
 (Explain how this sentiment aligns with the bandarmology/technical structure. Are institutions using this news to sell to retail, or is this genuine growth? Provide a clear, actionable conclusion).
