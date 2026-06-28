@@ -16,6 +16,36 @@ This skill gives you the ability to zoom out and scan the entire market (IDX) fo
 
 ---
 
+# ⚠️ STEP 0 — MANDATORY TRADING DAY GATE
+
+**Before doing ANYTHING else, you MUST verify today is an active IDX trading day.**
+
+Run the following check script first:
+```bash
+node scripts/trading-day-check.js
+# OR
+python3 scripts/trading-day-check.py
+```
+
+### Decision Table
+
+| Script Output | Your Action |
+| :--- | :--- |
+| `✅ MARKET OPEN` | Proceed with the scan below. |
+| `📅 WEEKEND — Market Closed` | STOP. Tell the user IDX is closed (weekend), then offer to analyze the last trading session. |
+| `🎌 PUBLIC HOLIDAY — Market Closed: [Holiday Name]` | STOP. Tell the user IDX is closed (holiday), then offer to analyze the last trading session. |
+
+### Response Template When Market is Closed
+```
+⛔ The IDX market is **closed today** — [Day, DD MMM YYYY] is a [weekend / public holiday: Holiday Name].
+Bursa Efek Indonesia only operates Monday–Friday on non-holiday working days.
+
+📊 I can instead analyze the **most recent trading session** data from **[Last Trading Day, DD MMM YYYY]**.
+Would you like me to proceed with that?
+```
+
+---
+
 # TOOL / FUNCTION MODE
 For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scripts/` directory to retrieve live data. 
 *Note: The scripts handle Stockbit authentication and token caching automatically via `.stockbit_token.json` and `.env`, so you do not need to manually authenticate unless a fresh login is required.*
