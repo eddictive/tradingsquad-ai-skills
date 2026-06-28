@@ -57,3 +57,6 @@ venv.bak/
 .claude/
 .agents/
 .grok/
+
+# Misc
+ide-dev.md
