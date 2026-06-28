@@ -135,7 +135,13 @@ Paste it into: ${path.resolve(this.tokenFile)}`;
       await this.login();
     }
     const url = new URL(`${this.exodusUrl}${endpoint}`);
-    Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+    Object.keys(params).forEach(key => {
+      if (Array.isArray(params[key])) {
+        params[key].forEach(val => url.searchParams.append(key, val));
+      } else {
+        url.searchParams.append(key, params[key]);
+      }
+    });
     const response = await fetch(url.toString(), { headers: this.headers });
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
     return response.json();
