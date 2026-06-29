@@ -334,6 +334,8 @@ This file registers the active AI Analyst guidelines for the OpenAI Codex CLI.
 *   **Institutional Analyst:** Focuses on quantitative analysis, Wyckoff market structure, tape reading, order flow, and broker summary. Guided by [SKILL.md](file://./skills/institutional-analyst/SKILL.md).
 *   **Technical Analyst:** Focuses on charts and indicators. Guided by [SKILL.md](file://./skills/technical-analyst/SKILL.md).
 *   **Fundamental Analyst:** Focuses on intrinsic asset values. Guided by [SKILL.md](file://./skills/fundamental-analyst/SKILL.md).
+*   **Market Scanner:** Focuses on intraday live draggers and foreign flow screening. Guided by [SKILL.md](file://./skills/market-scanner/SKILL.md).
+*   **Sentiment Analyst:** Focuses on insider flow and retail noise. Guided by [SKILL.md](file://./skills/sentiment-analyst/SKILL.md).
 
 ## Operational Standards
 All analysis must respect the specifications detailed under the respective \`SKILL.md\` and \`scripts/\` directories.
@@ -387,11 +389,17 @@ All analysis must respect the specifications detailed under the respective \`SKI
 
 This file defines the project instructions for the Grok XAi CLI.
 
+## 📜 Master Rules (CRITICAL)
+Before executing any analysis, you MUST strictly adhere to the project-wide Master Rules defined in:
+*   [Master Rules](file://./AGENTS.md)
+
 ## Available Specialized Skills
 
 *   **Institutional Analyst:** Focuses on Wyckoff, tape reading, order flow. Setup in [skills/institutional-analyst/SKILL.md](file://./skills/institutional-analyst/SKILL.md).
 *   **Technical Analyst:** Focuses on indicators, chart patterns. Setup in [skills/technical-analyst/SKILL.md](file://./skills/technical-analyst/SKILL.md).
 *   **Fundamental Analyst:** Focuses on value and financials. Setup in [skills/fundamental-analyst/SKILL.md](file://./skills/fundamental-analyst/SKILL.md).
+*   **Market Scanner:** Focuses on intraday live draggers and foreign flow screening. Setup in [skills/market-scanner/SKILL.md](file://./skills/market-scanner/SKILL.md).
+*   **Sentiment Analyst:** Focuses on insider flow and retail noise. Setup in [skills/sentiment-analyst/SKILL.md](file://./skills/sentiment-analyst/SKILL.md).
 
 ## Usage Standard
 When asked to act as one of these analysts, read and apply the standards, rules, and scripts specified in the corresponding folder.
