@@ -93,6 +93,7 @@ For institutional data, utilize either `institutional-api.py` or `institutional-
 
 ## get_orderbook()
 Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength.
+**CRITICAL RULE FOR ORDERBOOK VOLUME:** The raw volume numbers returned by the API are in **Shares (Lembar)**, NOT Lots. Since 1 Lot = 100 Shares in the IDX, you MUST mathematically divide the raw volume data by 100 before formatting it as "Lot" in your output (e.g. `3163300` raw volume = `31633` lots = `31.6 Ribu Lot`). Do NOT blindly append "Juta Lot" to the raw number.
 Calculate Bid Ask Ratio = Total Bid Lot / Total Offer Lot.
 Interpretation:
 > 2: Strong buyer pressure
