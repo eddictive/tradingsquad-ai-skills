@@ -143,7 +143,7 @@ function installSkillsJson(destDir) {
 
 function downloadAndExtractTarball(url, destDir) {
   return new Promise((resolve, reject) => {
-    const tarballPath = path.join(os.tmpdir(), 'tradingsquad-skills.tar.gz');
+    const tarballPath = path.join(os.tmpdir(), 'tradingsquad-ai-skills-master.tar.gz');
     const file = fs.createWriteStream(tarballPath);
     console.log(`📡 Downloading skill assets from ${url}...`);
     
@@ -188,7 +188,7 @@ async function ensureSkillsSrc() {
 
   console.log(`ℹ️  Local skills source not found. Fetching from GitHub...`);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tradingsquad-skills-'));
-  const tarballUrl = 'https://github.com/eddictive/tradingsquad-ai-skills/archive/refs/heads/main.tar.gz';
+  const tarballUrl = 'https://github.com/eddictive/tradingsquad-ai-skills/archive/refs/heads/master.tar.gz';
   
   await downloadAndExtractTarball(tarballUrl, tempDir);
   
