@@ -234,6 +234,81 @@ class TechnicalAPIClient(StockbitClient):
             "Ext 1.618 (Target)": high + (diff * 0.618)
         }
 
+    def _calc_smc(self, data):
+        if len(data) < 5:
+            return None
+            
+        swing_highs = []
+        swing_lows = []
+        
+        for i in range(2, len(data) - 2):
+            h_cur = float(data[i].get("high", 0))
+            h_prev1 = float(data[i-1].get("high", 0))
+            h_prev2 = float(data[i-2].get("high", 0))
+            h_next1 = float(data[i+1].get("high", 0))
+            h_next2 = float(data[i+2].get("high", 0))
+            
+            if h_cur > h_prev1 and h_cur > h_prev2 and h_cur > h_next1 and h_cur > h_next2:
+                swing_highs.append(h_cur)
+                
+            l_cur = float(data[i].get("low", 0))
+            l_prev1 = float(data[i-1].get("low", 0))
+            l_prev2 = float(data[i-2].get("low", 0))
+            l_next1 = float(data[i+1].get("low", 0))
+            l_next2 = float(data[i+2].get("low", 0))
+            
+            if l_cur < l_prev1 and l_cur < l_prev2 and l_cur < l_next1 and l_cur < l_next2:
+                swing_lows.append(l_cur)
+                
+        last_swing_high = swing_highs[-1] if swing_highs else None
+        last_swing_low = swing_lows[-1] if swing_lows else None
+        
+        current_price = float(data[-1].get("close", 0))
+        structure = "Consolidation"
+        if last_swing_high and current_price > last_swing_high:
+            structure = "Bullish BoS / CHoCH"
+        elif last_swing_low and current_price < last_swing_low:
+            structure = "Bearish BoS / CHoCH"
+        elif last_swing_high and last_swing_low:
+            if current_price > (last_swing_high + last_swing_low) / 2.0:
+                structure = "Premium (Bearish Bias)"
+            else:
+                structure = "Discount (Bullish Bias)"
+                
+        fvgs = []
+        for i in range(2, len(data)):
+            l_cur = float(data[i].get("low", 0))
+            h_prev2 = float(data[i-2].get("high", 0))
+            
+            h_cur = float(data[i].get("high", 0))
+            l_prev2 = float(data[i-2].get("low", 0))
+            
+            if l_cur > h_prev2:
+                fvgs.append({"type": "Bullish", "top": l_cur, "bottom": h_prev2, "age": len(data) - 1 - i})
+            elif h_cur < l_prev2:
+                fvgs.append({"type": "Bearish", "top": h_cur, "bottom": l_prev2, "age": len(data) - 1 - i})
+                
+        unmitigated_fvgs = []
+        for fvg in fvgs:
+            is_mitigated = False
+            start_idx = len(data) - fvg["age"]
+            for j in range(start_idx, len(data)):
+                if fvg["type"] == "Bullish" and float(data[j].get("low", 0)) <= fvg["top"]:
+                    is_mitigated = True
+                if fvg["type"] == "Bearish" and float(data[j].get("high", 0)) >= fvg["bottom"]:
+                    is_mitigated = True
+            if not is_mitigated:
+                unmitigated_fvgs.append(fvg)
+                
+        recent_fvgs = [f"{f['type']} FVG: {f['bottom']} - {f['top']}" for f in unmitigated_fvgs[-3:]]
+        
+        return {
+            "lastSwingHigh": last_swing_high,
+            "lastSwingLow": last_swing_low,
+            "structure": structure,
+            "unmitigatedFVGs": recent_fvgs
+        }
+
     def _get_high_low(self, data):
         if not data:
             return {"high": 0, "low": 0}
@@ -274,6 +349,7 @@ class TechnicalAPIClient(StockbitClient):
                 "ma21": self._calc_sma(data, 21),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
+                "smc": self._calc_smc(data),
                 "dayHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -297,6 +373,7 @@ class TechnicalAPIClient(StockbitClient):
                 "rsi14": self._calc_rsi(data, 14),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
+                "smc": self._calc_smc(data),
                 "swingHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -319,6 +396,7 @@ class TechnicalAPIClient(StockbitClient):
                 "rsi14": self._calc_rsi(data, 14),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
+                "smc": self._calc_smc(data),
                 "yearHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -342,6 +420,7 @@ class TechnicalAPIClient(StockbitClient):
                 "rsi14": self._calc_rsi(data, 14),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
+                "smc": self._calc_smc(data),
                 "swingHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }

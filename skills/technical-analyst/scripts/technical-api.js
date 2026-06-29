@@ -201,6 +201,64 @@ class TechnicalAPIClient extends StockbitClient {
     };
   }
 
+  _calcSMC(data) {
+    if (data.length < 5) return null;
+    
+    let swingHighs = [];
+    let swingLows = [];
+    
+    for (let i = 2; i < data.length - 2; i++) {
+      let isHigh = data[i].high > data[i-1].high && data[i].high > data[i-2].high && 
+                   data[i].high > data[i+1].high && data[i].high > data[i+2].high;
+      if (isHigh) swingHighs.push({ index: i, price: data[i].high });
+      
+      let isLow = data[i].low < data[i-1].low && data[i].low < data[i-2].low && 
+                  data[i].low < data[i+1].low && data[i].low < data[i+2].low;
+      if (isLow) swingLows.push({ index: i, price: data[i].low });
+    }
+    
+    let lastSwingHigh = swingHighs.length > 0 ? swingHighs[swingHighs.length - 1].price : null;
+    let lastSwingLow = swingLows.length > 0 ? swingLows[swingLows.length - 1].price : null;
+    
+    let currentPrice = data[data.length - 1].close;
+    let structureState = "Consolidation";
+    if (lastSwingHigh && currentPrice > lastSwingHigh) structureState = "Bullish BoS / CHoCH";
+    else if (lastSwingLow && currentPrice < lastSwingLow) structureState = "Bearish BoS / CHoCH";
+    else if (lastSwingHigh && lastSwingLow) {
+        if (currentPrice > (lastSwingHigh + lastSwingLow)/2) structureState = "Premium (Bearish Bias)";
+        else structureState = "Discount (Bullish Bias)";
+    }
+
+    let fvgs = [];
+    for (let i = 2; i < data.length; i++) {
+      if (data[i].low > data[i-2].high) {
+         fvgs.push({ type: 'Bullish', top: data[i].low, bottom: data[i-2].high, age: data.length - 1 - i });
+      }
+      else if (data[i].high < data[i-2].low) {
+         fvgs.push({ type: 'Bearish', top: data[i-2].low, bottom: data[i].high, age: data.length - 1 - i });
+      }
+    }
+    
+    let unmitigatedFVGs = [];
+    for (let fvg of fvgs) {
+      let isMitigated = false;
+      for(let j = data.length - fvg.age; j < data.length; j++) {
+         if (fvg.type === 'Bullish' && data[j].low <= fvg.top) isMitigated = true;
+         if (fvg.type === 'Bearish' && data[j].high >= fvg.bottom) isMitigated = true;
+      }
+      if (!isMitigated) unmitigatedFVGs.push(fvg);
+    }
+    
+    let recentFVGs = unmitigatedFVGs.slice(-3).map(f => `${f.type} FVG: ${f.bottom} - ${f.top}`);
+    
+    return {
+      lastSwingHigh: lastSwingHigh,
+      lastSwingLow: lastSwingLow,
+      structure: structureState,
+      unmitigatedFVGs: recentFVGs
+    };
+  }
+
   _getHighLow(data) {
     if (!data || data.length === 0) return { high: 0, low: 0 };
     let high = -Infinity, low = Infinity;
@@ -236,6 +294,7 @@ class TechnicalAPIClient extends StockbitClient {
         ma21: this._calcSMA(data, 21),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
+        smc: this._calcSMC(data),
         dayHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
@@ -258,6 +317,7 @@ class TechnicalAPIClient extends StockbitClient {
         rsi14: this._calcRSI(data, 14),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
+        smc: this._calcSMC(data),
         swingHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
@@ -279,6 +339,7 @@ class TechnicalAPIClient extends StockbitClient {
         rsi14: this._calcRSI(data, 14),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
+        smc: this._calcSMC(data),
         yearHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
