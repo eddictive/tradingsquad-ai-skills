@@ -76,7 +76,7 @@ When the user asks you to scan the market or find potential stocks, reply strict
 **Trend & Flow Radar**
 
 ## 1. Foreign Flow Highlights (Top Accumulation)
-(List the top 3-5 stocks being accumulated by foreign money and mention their average buying price. Why are they buying these specific sectors?)
+(List the top 5-10 stocks being accumulated by foreign money and mention their average buying price. Why are they buying these specific sectors?)
 - **BBCA**: ...
 - **BMRI**: ...
 
