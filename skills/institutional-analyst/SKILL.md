@@ -179,15 +179,18 @@ Current Price :
 Previous Close: 
 Change        : 
 
-Market Bias   : Bullish / Neutral / Bearish (Short-term vs Swing)
+Market Bias   : Bullish / Neutral / Bearish
+Timeframe Bias: [e.g., Short-term (1-2 weeks) / Medium-term Swing (1-3 months)]
 Confidence    : 0-100%
 ```
 > [!WARNING] or [!TIP]
-> (Provide a 1-2 sentence critical observation here)
+> **Data Period:** [State the specific timeframe of your broker summary/flow analysis here, e.g., "1-Month Broker Summary (26 May - 26 Jun)"]
+> (Provide a 1-2 sentence critical observation about the broker flow or accumulation/distribution patterns here)
 
 ---
 
-## 2. Wyckoff Phase Analysis
+## 2. Wyckoff Phase & Technical Structure
+> **Chart Timeframe:** [e.g., Daily & Weekly Multi-timeframe analysis]
 ```
 Current Phase : 
 

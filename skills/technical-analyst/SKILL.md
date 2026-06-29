@@ -54,6 +54,7 @@ When invoked, provide a clean, algorithmic technical report without hallucinatin
 **Mode**: [INTRADAY / SWING / LONG-TERM]
 
 ## 1. Trend & Moving Averages
+> **Chart Timeframe:** [e.g., Intraday (1H) / Daily (1D) / Weekly (1W)]
 - **Current Price**: ...
 - **MA Alignment**: (e.g. Price is above MA20 but below MA50, indicating short-term rebound in a medium-term downtrend).
 - *(If Intraday)* **VWAP Status**: ...
