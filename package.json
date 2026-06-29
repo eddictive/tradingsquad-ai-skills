@@ -25,6 +25,11 @@
     "institutional analysis",
     "wyckoff"
   ],
-  "author": "",
-  "license": "ISC"
+  "author": {
+    "name": "MasEDI.Net",
+    "email": "me@masedi.net",
+    "url": "https://masedi.net"
+  },
+  "homepage": "https://github.com/eddictive/tradingsquad-ai-skills",
+  "license": "CC-BY-NC-4.0"
 }
