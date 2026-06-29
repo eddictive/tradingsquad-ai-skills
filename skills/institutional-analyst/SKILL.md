@@ -140,6 +140,7 @@ Detect Smart Money Accumulation (brokers accumulating below current price, large
 Detect Distribution (previous top buyer becomes top seller, large selling above accumulation price, price stalls).
 Calculate Smart Money Score (0-100).
 **Sniper Entry Confluence (SMC + Broker Flow):** Look for alignment between the Unmitigated FVGs / SnD zones provided by the `technical-analyst` and Broker Accumulation. If Top 1-3 brokers accumulate heavily inside a Bullish FVG or at a Swing Low, it is an institutional trap/liquidity sweep (High Probability Setup).
+**Rule of 5 (CRITICAL):** You MUST fetch data using `limit=5` and ALWAYS analyze and output EXACTLY the Top 5 brokers for Net Buyer and Net Seller in your final report. Do NOT truncate to 3, and do NOT expand to 10. Focusing precisely on Top 5 filters out retail noise and maintains the highest Signal-to-Noise Ratio for your inference.
 **Crucial Check:** Look at `top1`, `top3`, and `top5` accumulation in the Market Detector. If `top1` is heavily accumulating but `top5` is distributing, it indicates "Cornering" by a single massive institution.
 **Multi-Timeframe Analysis Matrix (CRITICAL):**
 The `getBrokerSummary` and `getForeignFlow` scripts accept an `options` object with a `period` key, or `from` and `to` dates (e.g., `{ period: 'BROKER_SUMMARY_PERIOD_LAST_1_MONTH' }` or `{ from: '2026-05-25', to: '2026-06-25' }`).
@@ -230,10 +231,20 @@ Rating: [STRONG BUY / BUY / HOLD / SELL / STRONG SELL]
 === NET BUYER (Accumulator) ===
 Broker  | Type   | Net Lot  | Avg Price | Value        | Status
 --------|--------|----------|-----------|--------------|--------
+[1]     |        |          |           |              | 
+[2]     |        |          |           |              | 
+[3]     |        |          |           |              | 
+[4]     |        |          |           |              | 
+[5]     |        |          |           |              | 
 
 === NET SELLER (Distributor) ===
 Broker  | Type   | Net Lot  | Avg Price | Value        | Status
 --------|--------|----------|-----------|--------------|--------
+[1]     |        |          |           |              | 
+[2]     |        |          |           |              | 
+[3]     |        |          |           |              | 
+[4]     |        |          |           |              | 
+[5]     |        |          |           |              |
 
 KEY TAKEAWAY: (Provide brief interpretation of the flows)
 ```
