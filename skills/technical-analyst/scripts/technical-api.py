@@ -121,23 +121,86 @@ class TechnicalAPIClient(StockbitClient):
     def _calc_rsi(self, data, period=14, key="close"):
         if len(data) <= period:
             return None
-        gains = 0.0
-        losses = 0.0
-        for i in range(len(data) - period, len(data)):
+            
+        sum_gain = 0.0
+        sum_loss = 0.0
+        
+        # 1. Calculate initial SMA for the first 'period' bars
+        for i in range(1, period + 1):
             diff = float(data[i].get(key, 0)) - float(data[i-1].get(key, 0))
             if diff >= 0:
-                gains += diff
+                sum_gain += diff
             else:
-                losses -= diff
+                sum_loss -= diff
                 
-        avg_gain = gains / period
-        avg_loss = losses / period
+        avg_gain = sum_gain / period
+        avg_loss = sum_loss / period
         
+        # 2. Calculate Smoothed Moving Average (RMA) for the rest of the historical dataset
+        for i in range(period + 1, len(data)):
+            diff = float(data[i].get(key, 0)) - float(data[i-1].get(key, 0))
+            gain = diff if diff >= 0 else 0.0
+            loss = -diff if diff < 0 else 0.0
+            
+            avg_gain = ((avg_gain * (period - 1)) + gain) / period
+            avg_loss = ((avg_loss * (period - 1)) + loss) / period
+            
         if avg_loss == 0:
             return 100.0
             
         rs = avg_gain / avg_loss
         return 100.0 - (100.0 / (1.0 + rs))
+
+    def _calc_bollinger_bands(self, data, period=20, std_dev=2, key="close"):
+        if len(data) < period:
+            return None
+        slice_data = data[-period:]
+        vals = [float(c.get(key, 0)) for c in slice_data]
+        sma = sum(vals) / period
+        variance = sum((v - sma) ** 2 for v in vals) / period
+        sd = math.sqrt(variance)
+        return {
+            "upper": sma + (std_dev * sd),
+            "middle": sma,
+            "lower": sma - (std_dev * sd)
+        }
+
+    def _calc_macd(self, data, fast=12, slow=26, signal=9, key="close"):
+        if len(data) < slow + signal:
+            return None
+            
+        k_fast = 2.0 / (fast + 1)
+        k_slow = 2.0 / (slow + 1)
+        
+        ema_fast_arr = [None] * len(data)
+        ema_slow_arr = [None] * len(data)
+        
+        sum_f = sum(float(data[i].get(key, 0)) for i in range(fast))
+        ema_fast_arr[fast-1] = sum_f / fast
+        for i in range(fast, len(data)):
+            val = float(data[i].get(key, 0))
+            ema_fast_arr[i] = (val - ema_fast_arr[i-1]) * k_fast + ema_fast_arr[i-1]
+            
+        sum_s = sum(float(data[i].get(key, 0)) for i in range(slow))
+        ema_slow_arr[slow-1] = sum_s / slow
+        for i in range(slow, len(data)):
+            val = float(data[i].get(key, 0))
+            ema_slow_arr[i] = (val - ema_slow_arr[i-1]) * k_slow + ema_slow_arr[i-1]
+            
+        macd_line_arr = []
+        for i in range(slow-1, len(data)):
+            macd_line_arr.append(ema_fast_arr[i] - ema_slow_arr[i])
+            
+        sum_sig = sum(macd_line_arr[:signal])
+        ema_sig = sum_sig / signal
+        for i in range(signal, len(macd_line_arr)):
+            ema_sig = (macd_line_arr[i] - ema_sig) * (2.0 / (signal + 1)) + ema_sig
+            
+        macd_line = macd_line_arr[-1]
+        signal_line = ema_sig
+        histogram = macd_line - signal_line
+        
+        return {"MACD": macd_line, "Signal": signal_line, "Histogram": histogram}
 
     def _calc_vwap(self, data):
         if not data:
@@ -209,6 +272,8 @@ class TechnicalAPIClient(StockbitClient):
                 "vwap": self._calc_vwap(active_data),
                 "ma9": self._calc_sma(data, 9),
                 "ma21": self._calc_sma(data, 21),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
                 "dayHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -230,6 +295,8 @@ class TechnicalAPIClient(StockbitClient):
                 "ma20": self._calc_sma(data, 20),
                 "ma50": self._calc_sma(data, 50),
                 "rsi14": self._calc_rsi(data, 14),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
                 "swingHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -250,6 +317,8 @@ class TechnicalAPIClient(StockbitClient):
                 "ma50": self._calc_sma(data, 50),
                 "ma200": self._calc_sma(data, 200),
                 "rsi14": self._calc_rsi(data, 14),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
                 "yearHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
@@ -271,6 +340,8 @@ class TechnicalAPIClient(StockbitClient):
                 "ma20": self._calc_sma(data, 20),
                 "ma50": self._calc_sma(data, 50),
                 "rsi14": self._calc_rsi(data, 14),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
                 "swingHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }

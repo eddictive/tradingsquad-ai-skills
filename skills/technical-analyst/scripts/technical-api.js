@@ -92,17 +92,86 @@ class TechnicalAPIClient extends StockbitClient {
 
   _calcRSI(data, period = 14, key = 'close') {
     if (data.length <= period) return null;
-    let gains = 0, losses = 0;
-    for (let i = data.length - period; i < data.length; i++) {
+    
+    let sumGain = 0, sumLoss = 0;
+    
+    // 1. Calculate initial SMA for the first 'period' bars
+    for (let i = 1; i <= period; i++) {
       const diff = data[i][key] - data[i-1][key];
-      if (diff >= 0) gains += diff;
-      else losses -= diff;
+      if (diff >= 0) sumGain += diff;
+      else sumLoss -= diff;
     }
-    const avgGain = gains / period;
-    const avgLoss = losses / period;
+    
+    let avgGain = sumGain / period;
+    let avgLoss = sumLoss / period;
+    
+    // 2. Calculate Smoothed Moving Average (RMA) for the rest of the historical dataset
+    for (let i = period + 1; i < data.length; i++) {
+      const diff = data[i][key] - data[i-1][key];
+      const gain = diff >= 0 ? diff : 0;
+      const loss = diff < 0 ? -diff : 0;
+      
+      avgGain = ((avgGain * (period - 1)) + gain) / period;
+      avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+    }
+    
     if (avgLoss === 0) return 100;
     const rs = avgGain / avgLoss;
     return 100 - (100 / (1 + rs));
+  }
+
+  _calcBollingerBands(data, period = 20, stdDev = 2, key = 'close') {
+    if (data.length < period) return null;
+    const slice = data.slice(data.length - period);
+    const sum = slice.reduce((acc, val) => acc + (parseFloat(val[key]) || 0), 0);
+    const sma = sum / period;
+    
+    const variance = slice.reduce((acc, val) => acc + Math.pow((parseFloat(val[key]) || 0) - sma, 2), 0) / period;
+    const sd = Math.sqrt(variance);
+    
+    return {
+      upper: sma + (stdDev * sd),
+      middle: sma,
+      lower: sma - (stdDev * sd)
+    };
+  }
+
+  _calcMACD(data, fast = 12, slow = 26, signal = 9, key = 'close') {
+    if (data.length < slow + signal) return null;
+    
+    const kFast = 2 / (fast + 1);
+    const kSlow = 2 / (slow + 1);
+    const emaFastArr = new Array(data.length).fill(null);
+    const emaSlowArr = new Array(data.length).fill(null);
+    
+    let sumF = 0; for(let i=0; i<fast; i++) sumF += (parseFloat(data[i][key]) || 0);
+    emaFastArr[fast-1] = sumF / fast;
+    for(let i=fast; i<data.length; i++) {
+      emaFastArr[i] = ((parseFloat(data[i][key]) || 0) - emaFastArr[i-1]) * kFast + emaFastArr[i-1];
+    }
+    
+    let sumS = 0; for(let i=0; i<slow; i++) sumS += (parseFloat(data[i][key]) || 0);
+    emaSlowArr[slow-1] = sumS / slow;
+    for(let i=slow; i<data.length; i++) {
+      emaSlowArr[i] = ((parseFloat(data[i][key]) || 0) - emaSlowArr[i-1]) * kSlow + emaSlowArr[i-1];
+    }
+    
+    const macdLineArr = [];
+    for(let i=slow-1; i<data.length; i++) {
+      macdLineArr.push(emaFastArr[i] - emaSlowArr[i]);
+    }
+    
+    let sumSig = 0; for(let i=0; i<signal; i++) sumSig += macdLineArr[i];
+    let emaSig = sumSig / signal;
+    for(let i=signal; i<macdLineArr.length; i++) {
+      emaSig = (macdLineArr[i] - emaSig) * (2 / (signal + 1)) + emaSig;
+    }
+    
+    return { 
+      MACD: macdLineArr[macdLineArr.length - 1], 
+      Signal: emaSig, 
+      Histogram: macdLineArr[macdLineArr.length - 1] - emaSig 
+    };
   }
 
   _calcVWAP(data) {
@@ -165,6 +234,8 @@ class TechnicalAPIClient extends StockbitClient {
         vwap: this._calcVWAP(activeData),
         ma9: this._calcSMA(data, 9),
         ma21: this._calcSMA(data, 21),
+        macd: this._calcMACD(data),
+        bollingerBands: this._calcBollingerBands(data),
         dayHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
@@ -185,6 +256,8 @@ class TechnicalAPIClient extends StockbitClient {
         ma20: this._calcSMA(data, 20),
         ma50: this._calcSMA(data, 50),
         rsi14: this._calcRSI(data, 14),
+        macd: this._calcMACD(data),
+        bollingerBands: this._calcBollingerBands(data),
         swingHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
@@ -204,6 +277,8 @@ class TechnicalAPIClient extends StockbitClient {
         ma50: this._calcSMA(data, 50),
         ma200: this._calcSMA(data, 200),
         rsi14: this._calcRSI(data, 14),
+        macd: this._calcMACD(data),
+        bollingerBands: this._calcBollingerBands(data),
         yearHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
@@ -225,6 +300,8 @@ class TechnicalAPIClient extends StockbitClient {
         ma20: this._calcSMA(data, 20),
         ma50: this._calcSMA(data, 50),
         rsi14: this._calcRSI(data, 14),
+        macd: this._calcMACD(data),
+        bollingerBands: this._calcBollingerBands(data),
         swingHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
