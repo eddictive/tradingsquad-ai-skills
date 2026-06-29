@@ -18,8 +18,9 @@ Start your CLI inside the project directory and simply ask the lead analyst:
 2. It **delegates** the charting task by invoking the **`technical-analyst`** and the valuation task by invoking the **`fundamental-analyst`**.
 3. The `technical-analyst` runs `technical-api.js` to fetch Intraday/Daily candlestick data and groups the data into technical buckets (e.g., MA20 crossing MA50, RSI values).
 4. The `fundamental-analyst` runs `fundamental-api.js` to fetch KeyStats (PBV, PE) and calculates a Valuation Score.
-5. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers using a **Multi-Timeframe approach** (e.g., comparing Intraday vs 1-Month).
-6. The Agent synthesizes the data into **Quant Score 2.0** (Technical 50%, Fundamental 20%, Bandarmology 30%) and delivers the final Probability Report with an exact Entry Zone and Invalidation Stop Loss.
+5. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers using a **Multi-Timeframe approach** (e.g., comparing Intraday vs 1-Month) strictly adhering to the **Rule of 5** (only Top 5 brokers are fetched to optimize LLM attention).
+6. The Agent synthesizes the data to find **SMC Sniper Confluence** (e.g., matching a Bullish FVG detected by the technical agent with massive accumulation by the Top 1 Broker).
+7. The final output is delivered as a structured Probability Report with an exact Entry Zone and Invalidation Stop Loss.
 
 ---
 
@@ -47,6 +48,11 @@ Instead, ask the agent to run the **Live Draggers** scan:
 1. The **`market-scanner`** agent will invoke the `livedraggers` action.
 2. The script computes the real-time percent change of 16 heavily-weighted Free Float Giants (BBCA, BMRI, BBNI, AMMN, BREN, etc.) starting exactly from today's opening bell.
 3. It cleanly separates the output into **The Lifters 🚀** (Green Zone) and **The Draggers 🩸** (Red Zone), giving you the exact cause of intraday IHSG volatility.
+
+### Tracking Foreign Flow Market-Wide
+You can also ask the scanner to find which stocks foreigners are accumulating heavily across the entire exchange:
+> *"Act as the Market Scanner. Find the Top Net Foreign Buy and Sell for the entire IHSG today."*
+The scanner will utilize `getMarketMover` or `getTopStock` to fetch exactly where the offshore money is flowing.
 
 ---
 
@@ -84,3 +90,8 @@ Attach your screenshot(s) to the CLI chat and provide the ticker:
 > *"Act as the Institutional Analyst. Attached is the daily chart of BREN with Volume and MACD, along with the 20-day Broker Summary from RTI. Give me your Wyckoff and Bandarmologi analysis."*
 
 The Vision Model will visually scan the Chart structure, read the Broker tables, and output the exact same standardized Trading Plan without hitting any APIs.
+
+
+---
+
+&copy; Copyright (c) 2026 - MasEDI.Net

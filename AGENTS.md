@@ -26,3 +26,8 @@
 ### Built-in Skill Scripts vs Custom Scripts
 
 8. **Use Provided Skill Scripts (No Custom Fetchers)**: Do NOT write, create, or execute custom fetching/scraping scripts (e.g. `fetch_adro.js` or `script.py`) to gather market data. You MUST strictly use the pre-built API scripts provided in the specific skill's script directory (e.g., `skills/[skill_name]/scripts/` or `.agents/skills/[skill_name]/scripts/`) by executing them via terminal one-liners (e.g. `node -e "..."` or `python3 ...`). Writing custom scripts wastes time, bypasses built-in authentication, and is strictly prohibited. The `.data/temp/` directory is exclusively for piping output data (e.g. `.json`), NOT for storing executable code.
+
+
+---
+
+&copy; Copyright (c) 2026 - MasEDI.Net

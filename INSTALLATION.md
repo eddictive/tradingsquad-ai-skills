@@ -84,3 +84,8 @@ The automated installer will seamlessly create the `.codex/config.toml`, write t
 Grok reads project-specific configurations mapped heavily in `.grok/grok.md` and `.grok/AGENTS.md`.
 - **Install:** `curl -fsSL https://x.ai/cli/install.sh | bash`
 - **Invoke:** `grok inspect` to load skills, then ask natively in chat.
+
+
+---
+
+&copy; Copyright (c) 2026 - MasEDI.Net
