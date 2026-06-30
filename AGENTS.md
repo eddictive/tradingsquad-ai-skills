@@ -20,7 +20,7 @@
 
 7. **Save Final Reports**: Whenever you generate a final analysis report for a specific ticker (whether it is Institutional, Fundamental, Sentiment, or Technical), you MUST also save a copy of the report as a markdown file in the `report/` directory in addition to outputting it to the terminal. 
    - Ensure the directory exists (`mkdir -p report`).
-   - Use the naming convention `report/[TICKER]_[analysis_type]_analysis.md` (e.g., `report/ADRO_institutional_analysis.md` or `report/BBCA_sentiment_analysis.md`). 
+   - Use the naming convention `report/[TICKER]_[analysis_type]_analysis_[date].md` (e.g., `report/ADRO_institutional_analysis_2026-06-29.md` or `report/BBCA_sentiment_analysis_2026-06-29.md`). 
    - This ensures the user has a persistent historical record of your analysis.
 
 ### Built-in Skill Scripts vs Custom Scripts
