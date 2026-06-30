@@ -15,7 +15,12 @@ const FEEDS = {
   "WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
   "Yahoo Finance": "https://finance.yahoo.com/news/rssindex",
   "CNBC US": "https://search.cnbc.com/rs/search/combinedcms/view.xml?profile=120000000&id=10000664",
-  "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss"
+  "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss",
+  "IDX Channel": "https://sindikasi.idxchannel.com/rss",
+  "IDX Channel Market News": "https://sindikasi.idxchannel.com/rss/market-news",
+  "IDX Channel ESG Zone": "https://rss.app/feeds/RlLjCUWQKH7f9zOb.xml",
+  "Emitennews": "https://rss.app/feeds/gAu4NEt6kg5BwwKo.xml",
+  "Trading Economics": "https://tradingeconomics.com/ws/stream.ashx?start=0&size=25"
 };
 
 /**
@@ -63,8 +68,19 @@ async function fetchFeed(name, url, limit = 5) {
       throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     }
     
-    const xmlText = await response.text();
-    const items = parseRSS(xmlText);
+    const text = await response.text();
+    let items = [];
+    
+    if (text.trim().startsWith('[')) {
+      const jsonData = JSON.parse(text);
+      items = jsonData.map(item => ({
+        title: item.title,
+        link: item.url ? (item.url.startsWith('http') ? item.url : `https://tradingeconomics.com${item.url}`) : '',
+        pubDate: item.date
+      }));
+    } else {
+      items = parseRSS(text);
+    }
     
     return items.slice(0, limit).map(item => ({
       source: name,
@@ -86,9 +102,9 @@ async function main() {
   if (action === "all") {
     targets = Object.keys(FEEDS);
   } else if (action === "local") {
-    targets = ["CNBC Indonesia"];
+    targets = ["CNBC Indonesia", "IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"];
   } else if (action === "global") {
-    targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US"];
+    targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US", "Trading Economics"];
   } else {
     // If user passed a specific feed name subset
     targets = Object.keys(FEEDS).filter(k => k.toLowerCase().includes(action));

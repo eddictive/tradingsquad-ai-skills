@@ -20,7 +20,12 @@ FEEDS = {
     "WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
     "Yahoo Finance": "https://finance.yahoo.com/news/rssindex",
     "CNBC US": "https://search.cnbc.com/rs/search/combinedcms/view.xml?profile=120000000&id=10000664",
-    "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss"
+    "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss",
+    "IDX Channel": "https://sindikasi.idxchannel.com/rss",
+    "IDX Channel Market News": "https://sindikasi.idxchannel.com/rss/market-news",
+    "IDX Channel ESG Zone": "https://rss.app/feeds/RlLjCUWQKH7f9zOb.xml",
+    "Emitennews": "https://rss.app/feeds/gAu4NEt6kg5BwwKo.xml",
+    "Trading Economics": "https://tradingeconomics.com/ws/stream.ashx?start=0&size=25"
 }
 
 def fetch_feed(name, url, limit=5):
@@ -30,26 +35,39 @@ def fetch_feed(name, url, limit=5):
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            xml_data = response.read()
+            data_text = response.read().decode('utf-8')
             
-        root = ET.fromstring(xml_data)
-        items = root.findall('.//item')
-        
         results = []
-        for item in items[:limit]:
-            title = item.findtext('title') or ''
-            link = item.findtext('link') or ''
-            pubDate = item.findtext('pubDate') or ''
-            
-            # Basic cleanup
-            title = title.replace('<![CDATA[', '').replace(']]>', '').strip()
-            
-            results.append({
-                "source": name,
-                "title": title,
-                "link": link,
-                "pubDate": pubDate
-            })
+        
+        if data_text.strip().startswith('['):
+            json_data = json.loads(data_text)
+            for item in json_data[:limit]:
+                link = item.get('url', '')
+                if link and not link.startswith('http'):
+                    link = 'https://tradingeconomics.com' + link
+                results.append({
+                    "source": name,
+                    "title": item.get('title', ''),
+                    "link": link,
+                    "pubDate": item.get('date', '')
+                })
+        else:
+            root = ET.fromstring(data_text)
+            items = root.findall('.//item')
+            for item in items[:limit]:
+                title = item.findtext('title') or ''
+                link = item.findtext('link') or ''
+                pubDate = item.findtext('pubDate') or ''
+                
+                # Basic cleanup
+                title = title.replace('<![CDATA[', '').replace(']]>', '').strip()
+                
+                results.append({
+                    "source": name,
+                    "title": title,
+                    "link": link,
+                    "pubDate": pubDate
+                })
         return results
     except Exception as e:
         print(f"Warning: Failed to fetch {name} - {str(e)}", file=sys.stderr)
@@ -63,9 +81,9 @@ def main():
     if action == "all":
         targets = FEEDS.keys()
     elif action == "local":
-        targets = ["CNBC Indonesia"]
+        targets = ["CNBC Indonesia", "IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"]
     elif action == "global":
-        targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US"]
+        targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US", "Trading Economics"]
     else:
         # If user passed a specific feed name
         targets = [k for k in FEEDS.keys() if action.lower() in k.lower()]
