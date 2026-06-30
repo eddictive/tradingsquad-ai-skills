@@ -3,7 +3,7 @@ const { StockbitClient } = require('../../../core/stockbit-auth.js');
 class ScannerAPIClient extends StockbitClient {
   /**
    * Fetch Market Mover
-   * mover_type: MOVER_TYPE_TOP_GAINER, MOVER_TYPE_NET_FOREIGN_BUY, etc.
+   * mover_type: MOVER_TYPE_TOP_GAINER, MOVER_TYPE_TOP_LOSER, MOVER_TYPE_TOP_VALUE, MOVER_TYPE_TOP_VOLUME, MOVER_TYPE_NET_FOREIGN_BUY, MOVER_TYPE_NET_FOREIGN_SELL, etc.
    */
   async getMarketMover(moverType = 'MOVER_TYPE_NET_FOREIGN_BUY') {
     const params = {
@@ -70,7 +70,7 @@ class ScannerAPIClient extends StockbitClient {
         ordercol: 3,
         page: 1,
         universe: "{\"scope\":\"idx\",\"scopeID\":\"558\",\"name\":\"IHSG\"}",
-        filters: "[{\"type\":\"basic\",\"item1\":14400,\"item1name\":\"Bandar Accum/Dist\",\"operator\":\">\",\"item2\":\"20\",\"item2name\":\"\",\"multiplier\":\"0\"},{\"type\":\"basic\",\"item1\":13620,\"item1name\":\"Value\",\"operator\":\">\",\"item2\":\"3000000000\",\"item2name\":\"\",\"multiplier\":\"0\"},{\"type\":\"basic\",\"item1\":2661,\"item1name\":\"Price\",\"operator\":\">=\",\"item2\":\"50\",\"item2name\":\"\",\"multiplier\":\"0\"}]",
+        filters: "[{\"type\":\"basic\",\"item1\":14400,\"item1name\":\"Bandar Accum/Dist\",\"operator\":\">\",\"item2\":\"20\",\"item2name\":\"\",\"multiplier\":\"0\"},{\"type\":\"basic\",\"item1\":13620,\"item1name\":\"Value\",\"operator\":\">\",\"item2\":\"3000000000\",\"item2name\":\"\",\"multiplier\":\"0\"},{\"type\":\"basic\",\"item1\":2661,\"item1name\":\"Price\",\"operator\":\">=\",\"item2\":\"100\",\"item2name\":\"\",\"multiplier\":\"0\"}]",
         sequence: "14400,13620,2661",
         screenerid: "0",
         type: "TEMPLATE_TYPE_CUSTOM"
@@ -144,6 +144,68 @@ class ScannerAPIClient extends StockbitClient {
     
     return { lifters, draggers };
   }
+
+  /**
+   * Get Top Broker
+   */
+  async getTopBroker(period = 'TB_PERIOD_LAST_1_DAY') {
+    const params = {
+      sort: 'TB_SORT_BY_TOTAL_VALUE',
+      order: 'ORDER_BY_DESC',
+      period,
+      market_type: 'MARKET_TYPE_REGULER'
+    };
+    const response = await this._getExodus('/order-trade/broker/top', params);
+    if (!response.data || !response.data.list) return [];
+    
+    return response.data.list.slice(0, 10).map(b => ({
+      broker_code: b.code,
+      name: b.name,
+      total_value: b.total_value,
+      net_value: b.net_value,
+      group: b.group
+    }));
+  }
+
+  /**
+   * Get Whale Activity (Broker Market Detector)
+   */
+  async getWhaleActivity(brokerCode) {
+    const params = {
+      limit: 50,
+      transaction_type: 'TRANSACTION_TYPE_NET',
+      market_board: 'MARKET_BOARD_REGULER',
+      investor_type: 'INVESTOR_TYPE_ALL'
+    };
+    const response = await this._getExodus(`/findata-view/marketdetectors/activity/${brokerCode}/detail`, params);
+    if (!response.data || !response.data.broker_summary) return { buy: [], sell: [] };
+    
+    const summary = response.data.broker_summary;
+    const formatNetbs = (arr) => arr.map(i => ({
+      ticker: i.netbs_stock_code,
+      avg_price: i.netbs_buy_avg_price || i.netbs_sell_avg_price,
+      value: i.bval || i.sval
+    })).sort((a, b) => Math.abs(parseFloat(b.value)) - Math.abs(parseFloat(a.value))).slice(0, 10);
+
+    return {
+      bandar_detector: response.data.bandar_detector || {},
+      top_buy: formatNetbs(summary.brokers_buy || []),
+      top_sell: formatNetbs(summary.brokers_sell || [])
+    };
+  }
+
+  /**
+   * Get Trending Stocks (Crowd Sentiment)
+   */
+  async getTrending() {
+    const response = await this._getExodus('/emitten/trending');
+    if (!response.data || !response.data.list) return [];
+    return response.data.list.slice(0, 15).map(t => ({
+      ticker: t.code,
+      company_name: t.name,
+      rank_change: t.rank_change
+    }));
+  }
 }
 
 if (require.main === module) {
@@ -169,6 +231,18 @@ if (require.main === module) {
       } else if (action === 'livedraggers') {
         const data = await api.getLiveDraggers();
         console.log(`Live Big Caps Draggers:`, JSON.stringify(data, null, 2));
+      } else if (action === 'topbroker') {
+        const period = process.argv[3] || 'TB_PERIOD_LAST_1_DAY';
+        const data = await api.getTopBroker(period);
+        console.log(`Top Brokers [${period}]:`, JSON.stringify(data, null, 2));
+      } else if (action === 'whale') {
+        const broker = process.argv[3];
+        if (!broker) throw new Error('Provide broker code, e.g. node scanner-api.js whale AK');
+        const data = await api.getWhaleActivity(broker);
+        console.log(`Whale Activity [${broker}]:`, JSON.stringify(data, null, 2));
+      } else if (action === 'trending') {
+        const data = await api.getTrending();
+        console.log(`Trending Stocks:`, JSON.stringify(data, null, 2));
       }
     } catch (e) {
       console.error(e.message);

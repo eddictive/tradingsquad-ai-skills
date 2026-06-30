@@ -9,10 +9,13 @@ This skill gives you the ability to zoom out and scan the entire market (IDX) fo
 
 ## WHAT YOU CAN DETECT
 
-1.  **Top Foreign Buy/Sell**: Discover which stocks are being accumulated by Foreign Institutions over a specific date range (e.g. 1 week, 1 month).
-2.  **Market Movers**: Find today's top gainers and top net foreign buys.
-3.  **Big Accumulation Screener**: Run a custom Screener Template that filters the entire IHSG for stocks experiencing massive Bandar Accumulation.
-4.  **Rebound Hunter Screener**: Find fundamentally healthy stocks (positive PE) whose price has crossed above MA50 with strong momentum.
+1.  **Whale / Smart Money Tracker (Broker Activity)**: Track exactly which stocks the top Foreign/Local Brokers (e.g. AK, ZP, YU) are accumulating or dumping *real-time*.
+2.  **Top Brokers of the Day/Week**: Find out which brokers hold the biggest transaction volume today.
+3.  **Crowd Sentiment (Trending Stocks)**: See which tickers are actively searched and discussed by retail traders right now.
+4.  **Top Foreign Buy/Sell**: Discover which stocks are being accumulated by Foreign Institutions over a specific date range (e.g. 1 week, 1 month).
+5.  **Market Movers**: Find today's top gainers, top losers, top values, top volumes, top net foreign buys, and top net foreign sells.
+6.  **Big Accumulation Screener**: Run a custom Screener Template that filters the entire IHSG for stocks experiencing massive Bandar Accumulation.
+7.  **Rebound Hunter Screener**: Find fundamentally healthy stocks (positive PE) whose price has crossed above MA50 with strong momentum.
 
 ---
 
@@ -57,7 +60,10 @@ For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scr
 
 | Command | Description | Example |
 | :--- | :--- | :--- |
-| `node scripts/scanner-api.js mover [TYPE]` | Gets top movers (e.g. MOVER_TYPE_NET_FOREIGN_BUY) | `node scripts/scanner-api.js mover MOVER_TYPE_NET_FOREIGN_BUY` |
+| `node scripts/scanner-api.js topbroker [PERIOD]` | Gets top brokers by transaction value. Period defaults to `TB_PERIOD_LAST_1_DAY` | `node scripts/scanner-api.js topbroker TB_PERIOD_LAST_1_DAY` |
+| `node scripts/scanner-api.js whale [BROKER_CODE]` | Gets stocks actively accumulated/distributed by a specific broker | `node scripts/scanner-api.js whale AK` |
+| `node scripts/scanner-api.js trending` | Gets current crowd sentiment (trending stocks) | `node scripts/scanner-api.js trending` |
+| `node scripts/scanner-api.js mover [TYPE]` | Gets top movers (e.g. MOVER_TYPE_TOP_VALUE) | `node scripts/scanner-api.js mover MOVER_TYPE_TOP_VALUE` |
 | `node scripts/scanner-api.js topstock [START] [END]` | Gets top foreign buy/sell flow over a date range | `node scripts/scanner-api.js topstock 2026-06-01 2026-06-25` |
 | `node scripts/scanner-api.js screener [TYPE]` | Runs custom template screener (ACCUMULATION/REBOUND) | `node scripts/scanner-api.js screener ACCUMULATION` |
 | `node scripts/scanner-api.js livedraggers` | Scans 16 Big Caps (including BBNI, GOTO) to find live intraday draggers | `node scripts/scanner-api.js livedraggers` |
@@ -75,18 +81,17 @@ When the user asks you to scan the market or find potential stocks, reply strict
 # 📡 MARKET SCANNER REPORT — [Date]
 **Trend & Flow Radar**
 
-## 1. Foreign Flow Highlights (Top Accumulation)
-(List the top 5-10 stocks being accumulated by foreign money and mention their average buying price. Why are they buying these specific sectors?)
-- **BBCA**: ...
-- **BMRI**: ...
+## 1. Whale Tracker & Foreign Flow
+*(Analyze Top Broker Activity! If AK or ZP is the Top Broker, what exactly are they accumulating? List the top 5-10 stocks being accumulated by foreign/smart money and mention their average buying price. Why are they buying these specific sectors?)*
+- **[TICKER]**: ...
 
 ## 2. Big Accumulation Screener Results
-(List the top results from the ACCUMULATION screener. These are stocks with Bandar Accum/Dist score > 20.)
-- **TLKM**: (Briefly explain if this is a breakout setup or markdown accumulation).
+*(List the top results from the ACCUMULATION screener. These are stocks with Bandar Accum/Dist score > 20.)*
+- **[TICKER]**: (Briefly explain if this is a breakout setup or markdown accumulation).
 
-## 3. Rebound Hunters (Momentum Play)
-(List results from the REBOUND screener. Discuss if these are worth a swing trade).
+## 3. Crowd Sentiment (Trending) & Rebound Hunters
+*(List results from the Trending API and REBOUND screener. Cross-reference them: Is there a fundamental stock that is suddenly trending on retail radar? Discuss if these are worth a swing trade).*
 
 ## 4. Strategic Conclusion
-(Synthesize the data. Where is the "Smart Money" flowing? E.g. "Foreigners are dumping banking but heavily accumulating energy.")
+*(Synthesize the data. Where is the "Smart Money" flowing? E.g. "Foreign broker AK is dumping banking but heavily accumulating energy. Meanwhile, retail FOMO is focused on tech.")*
 ```

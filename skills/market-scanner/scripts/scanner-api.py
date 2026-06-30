@@ -58,7 +58,7 @@ class ScannerAPIClient(StockbitClient):
                 "ordercol": 3,
                 "page": 1,
                 "universe": '{"scope":"idx","scopeID":"558","name":"IHSG"}',
-                "filters": '[{"type":"basic","item1":14400,"item1name":"Bandar Accum/Dist","operator":">","item2":"20","item2name":"","multiplier":"0"},{"type":"basic","item1":13620,"item1name":"Value","operator":">","item2":"3000000000","item2name":"","multiplier":"0"},{"type":"basic","item1":2661,"item1name":"Price","operator":">=","item2":"50","item2name":"","multiplier":"0"}]',
+                "filters": '[{"type":"basic","item1":14400,"item1name":"Bandar Accum/Dist","operator":">","item2":"20","item2name":"","multiplier":"0"},{"type":"basic","item1":13620,"item1name":"Value","operator":">","item2":"3000000000","item2name":"","multiplier":"0"},{"type":"basic","item1":2661,"item1name":"Price","operator":">=","item2":"100","item2name":"","multiplier":"0"}]',
                 "sequence": "14400,13620,2661",
                 "screenerid": "0",
                 "type": "TEMPLATE_TYPE_CUSTOM"
@@ -137,6 +137,62 @@ class ScannerAPIClient(StockbitClient):
         
         return {"lifters": lifters, "draggers": draggers}
 
+    def get_top_broker(self, period="TB_PERIOD_LAST_1_DAY"):
+        params = {
+            "sort": "TB_SORT_BY_TOTAL_VALUE",
+            "order": "ORDER_BY_DESC",
+            "period": period,
+            "market_type": "MARKET_TYPE_REGULER"
+        }
+        response = self._get_exodus("/order-trade/broker/top", params)
+        data = response.get("data", {}).get("list", [])[:10]
+        return [{
+            "broker_code": b.get("code"),
+            "name": b.get("name"),
+            "total_value": b.get("total_value"),
+            "net_value": b.get("net_value"),
+            "group": b.get("group")
+        } for b in data]
+
+    def get_whale_activity(self, broker_code):
+        params = {
+            "limit": 50,
+            "transaction_type": "TRANSACTION_TYPE_NET",
+            "market_board": "MARKET_BOARD_REGULER",
+            "investor_type": "INVESTOR_TYPE_ALL"
+        }
+        response = self._get_exodus(f"/findata-view/marketdetectors/activity/{broker_code}/detail", params)
+        summary = response.get("data", {}).get("broker_summary", {})
+        bandar_detector = response.get("data", {}).get("bandar_detector", {})
+        
+        def format_netbs(arr):
+            res = []
+            for i in arr:
+                val = i.get("bval") or i.get("sval", "0")
+                avg = i.get("netbs_buy_avg_price") or i.get("netbs_sell_avg_price", "0")
+                res.append({
+                    "ticker": i.get("netbs_stock_code"),
+                    "avg_price": avg,
+                    "value": val
+                })
+            res.sort(key=lambda x: abs(float(x["value"])), reverse=True)
+            return res[:10]
+
+        return {
+            "bandar_detector": bandar_detector,
+            "top_buy": format_netbs(summary.get("brokers_buy", [])),
+            "top_sell": format_netbs(summary.get("brokers_sell", []))
+        }
+
+    def get_trending(self):
+        response = self._get_exodus("/emitten/trending")
+        data = response.get("data", {}).get("list", [])[:15]
+        return [{
+            "ticker": t.get("code"),
+            "company_name": t.get("name"),
+            "rank_change": t.get("rank_change")
+        } for t in data]
+
 if __name__ == "__main__":
     api = ScannerAPIClient()
     action = sys.argv[1] if len(sys.argv) > 1 else "mover"
@@ -154,3 +210,17 @@ if __name__ == "__main__":
     elif action == "livedraggers":
         data = api.get_live_draggers()
         print("Live Big Caps Draggers:", json.dumps(data, indent=2))
+    elif action == "topbroker":
+        period = sys.argv[2] if len(sys.argv) > 2 else "TB_PERIOD_LAST_1_DAY"
+        data = api.get_top_broker(period)
+        print(f"Top Brokers [{period}]:", json.dumps(data, indent=2))
+    elif action == "whale":
+        if len(sys.argv) < 3:
+            print("Provide broker code, e.g. python scanner-api.py whale AK")
+            sys.exit(1)
+        broker = sys.argv[2]
+        data = api.get_whale_activity(broker)
+        print(f"Whale Activity [{broker}]:", json.dumps(data, indent=2))
+    elif action == "trending":
+        data = api.get_trending()
+        print("Trending Stocks:", json.dumps(data, indent=2))
