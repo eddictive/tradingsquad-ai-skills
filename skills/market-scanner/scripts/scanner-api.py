@@ -193,6 +193,37 @@ class ScannerAPIClient(StockbitClient):
             "rank_change": t.get("rank_change")
         } for t in data]
 
+    def get_symbol_detector(self, ticker, period="BROKER_SUMMARY_PERIOD_LATEST"):
+        params = {
+            "transaction_type": "TRANSACTION_TYPE_NET",
+            "market_board": "MARKET_BOARD_REGULER",
+            "investor_type": "INVESTOR_TYPE_ALL",
+            "limit": 25,
+            "period": period
+        }
+        response = self._get_exodus(f"/marketdetectors/{ticker}", params)
+        return response.get("data", None)
+
+    def get_running_trade(self, symbols, limit=50):
+        query_string = f"action_type=RUNNING_TRADE_ACTION_TYPE_ALL&sort=DESC&limit={limit}&order_by=RUNNING_TRADE_ORDER_BY_TIME"
+        if symbols:
+            for s in symbols:
+                query_string += f"&symbols[]={s}"
+        
+        response = self._get_exodus(f"/order-trade/running-trade?{query_string}")
+        running_trade = response.get("data", {}).get("running_trade", [])
+        
+        return [{
+            "time": rt.get("time"),
+            "action": rt.get("action"),
+            "ticker": rt.get("code"),
+            "price": rt.get("price"),
+            "lot": rt.get("lot"),
+            "buyer": rt.get("buyer"),
+            "seller": rt.get("seller"),
+            "market_board": rt.get("market_board")
+        } for rt in running_trade]
+
 if __name__ == "__main__":
     api = ScannerAPIClient()
     action = sys.argv[1] if len(sys.argv) > 1 else "mover"
@@ -224,3 +255,18 @@ if __name__ == "__main__":
     elif action == "trending":
         data = api.get_trending()
         print("Trending Stocks:", json.dumps(data, indent=2))
+    elif action == "detector":
+        if len(sys.argv) < 3:
+            print("Provide ticker code, e.g. python scanner-api.py detector CUAN")
+            sys.exit(1)
+        ticker = sys.argv[2]
+        period = sys.argv[3] if len(sys.argv) > 3 else "BROKER_SUMMARY_PERIOD_LATEST"
+        data = api.get_symbol_detector(ticker, period)
+        print(f"Symbol Detector [{ticker}]:", json.dumps(data, indent=2))
+    elif action == "tape":
+        symbols_arg = sys.argv[2] if len(sys.argv) > 2 else ""
+        symbols = symbols_arg.split(',') if symbols_arg else []
+        limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20
+        data = api.get_running_trade(symbols, limit)
+        print("Running Trade Tape:", json.dumps(data, indent=2))
+

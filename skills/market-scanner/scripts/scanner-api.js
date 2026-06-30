@@ -206,6 +206,49 @@ class ScannerAPIClient extends StockbitClient {
       rank_change: t.rank_change
     }));
   }
+
+  /**
+   * Get Symbol Detector (Bandar Detector & Broker Summary for a specific stock)
+   */
+  async getSymbolDetector(ticker, period = 'BROKER_SUMMARY_PERIOD_LATEST') {
+    const params = {
+      transaction_type: 'TRANSACTION_TYPE_NET',
+      market_board: 'MARKET_BOARD_REGULER',
+      investor_type: 'INVESTOR_TYPE_ALL',
+      limit: 25,
+      period: period
+    };
+    const response = await this._getExodus(`/marketdetectors/${ticker}`, params);
+    if (!response.data) return null;
+    return response.data;
+  }
+
+  /**
+   * Get Running Trade for specific symbols
+   * @param {string[]} symbols Array of tickers, e.g. ['CUAN', 'BREN']
+   */
+  async getRunningTrade(symbols, limit = 50) {
+    // Manually construct query params because of array brackets like symbols[]=A&symbols[]=B
+    let queryString = `action_type=RUNNING_TRADE_ACTION_TYPE_ALL&sort=DESC&limit=${limit}&order_by=RUNNING_TRADE_ORDER_BY_TIME`;
+    if (symbols && symbols.length > 0) {
+      symbols.forEach(s => {
+        queryString += `&symbols[]=${s}`;
+      });
+    }
+    const response = await this._getExodus(`/order-trade/running-trade?${queryString}`);
+    if (!response.data || !response.data.running_trade) return [];
+    
+    return response.data.running_trade.map(rt => ({
+      time: rt.time,
+      action: rt.action,
+      ticker: rt.code,
+      price: rt.price,
+      lot: rt.lot,
+      buyer: rt.buyer,
+      seller: rt.seller,
+      market_board: rt.market_board
+    }));
+  }
 }
 
 if (require.main === module) {
@@ -243,6 +286,18 @@ if (require.main === module) {
       } else if (action === 'trending') {
         const data = await api.getTrending();
         console.log(`Trending Stocks:`, JSON.stringify(data, null, 2));
+      } else if (action === 'detector') {
+        const ticker = process.argv[3];
+        if (!ticker) throw new Error('Provide ticker code, e.g. node scanner-api.js detector CUAN');
+        const period = process.argv[4] || 'BROKER_SUMMARY_PERIOD_LATEST';
+        const data = await api.getSymbolDetector(ticker, period);
+        console.log(`Symbol Detector [${ticker}]:`, JSON.stringify(data, null, 2));
+      } else if (action === 'tape') {
+        const symbolsArg = process.argv[3]; // e.g. "CUAN,BREN"
+        const symbols = symbolsArg ? symbolsArg.split(',') : [];
+        const limit = parseInt(process.argv[4] || '20', 10);
+        const data = await api.getRunningTrade(symbols, limit);
+        console.log(`Running Trade Tape:`, JSON.stringify(data, null, 2));
       }
     } catch (e) {
       console.error(e.message);

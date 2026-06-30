@@ -16,6 +16,8 @@ This skill gives you the ability to zoom out and scan the entire market (IDX) fo
 5.  **Market Movers**: Find today's top gainers, top losers, top values, top volumes, top net foreign buys, and top net foreign sells.
 6.  **Big Accumulation Screener**: Run a custom Screener Template that filters the entire IHSG for stocks experiencing massive Bandar Accumulation.
 7.  **Rebound Hunter Screener**: Find fundamentally healthy stocks (positive PE) whose price has crossed above MA50 with strong momentum.
+8.  **Symbol Detector (Deep Dive)**: Check the detailed Bandar Accumulation/Distribution status and detailed Broker Net Buy/Sell average prices for a specific stock.
+9.  **Live Tape Reading (Running Trade)**: Track tick-by-tick execution (buy/sell flow) of multiple stocks simultaneously to catch real-time FOMO or panic.
 
 ---
 
@@ -67,6 +69,8 @@ For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scr
 | `node scripts/scanner-api.js topstock [START] [END]` | Gets top foreign buy/sell flow over a date range | `node scripts/scanner-api.js topstock 2026-06-01 2026-06-25` |
 | `node scripts/scanner-api.js screener [TYPE]` | Runs custom template screener (ACCUMULATION/REBOUND) | `node scripts/scanner-api.js screener ACCUMULATION` |
 | `node scripts/scanner-api.js livedraggers` | Scans 16 Big Caps (including BBNI, GOTO) to find live intraday draggers | `node scripts/scanner-api.js livedraggers` |
+| `node scripts/scanner-api.js detector [TICKER]` | Gets specific symbol detector (Bandar Detector & Broker Summary) | `node scripts/scanner-api.js detector CUAN` |
+| `node scripts/scanner-api.js tape [TICKERS] [LIMIT]` | Tracks the tick-by-tick Running Trade of one or multiple tickers | `node scripts/scanner-api.js tape CUAN,BREN 50` |
 
 ## 2. Market Mover Types
 - **Live Intraday Warning:** Data `topstock` dan `mover` (Foreign Flow) seringkali mengalami *delay* (direkap *End of Day*). Jika diminta menganalisis penggerak bursa saat jam perdagangan sedang berlangsung (Sesi 1 atau Sesi 2), WAJIB gunakan `node scripts/scanner-api.js livedraggers` untuk menarik pergerakan *real-time* dari 16 Saham Raksasa penentu IHSG (termasuk BBCA, BBRI, BMRI, BBNI, TLKM, AMMN, BREN, TPIA, BYAN, ASII, DSSA, GOTO).
