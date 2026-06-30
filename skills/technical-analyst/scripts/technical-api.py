@@ -327,6 +327,44 @@ class TechnicalAPIClient(StockbitClient):
     # CONTEXT-AWARE ANALYSIS
     # ==========================================
 
+    def _calc_atr(self, data, period=14):
+        if not data or len(data) < period: return None
+        trs = []
+        for i in range(1, len(data)):
+            high = float(data[i].get("high", 0))
+            low = float(data[i].get("low", 0))
+            prev_close = float(data[i-1].get("close", 0))
+            tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
+            trs.append(tr)
+        return sum(trs[-period:]) / period
+
+    def _calc_volume_profile(self, data, bins=10):
+        if not data: return None
+        max_p = -float('inf')
+        min_p = float('inf')
+        for c in data:
+            h, l = float(c.get("high", 0)), float(c.get("low", 0))
+            if h > max_p: max_p = h
+            if l < min_p: min_p = l
+        
+        step = (max_p - min_p) / bins
+        if step == 0: return {"poc": float(data[0].get("close",0)), "supportArea": f"{min_p} - {max_p}"}
+        
+        profile = [{"priceStart": min_p + i*step, "priceEnd": min_p + (i+1)*step, "volume": 0} for i in range(bins)]
+        for c in data:
+            typ_price = (float(c.get("high", 0)) + float(c.get("low", 0)) + float(c.get("close", 0))) / 3
+            vol = float(c.get("volume", 0))
+            idx = int((typ_price - min_p) // step)
+            if idx >= bins: idx = bins - 1
+            if idx < 0: idx = 0
+            profile[idx]["volume"] += vol
+            
+        poc = max(profile, key=lambda x: x["volume"])
+        return {
+            "poc": (poc["priceStart"] + poc["priceEnd"]) / 2,
+            "supportArea": f"{poc['priceStart']:.0f} - {poc['priceEnd']:.0f}"
+        }
+
     def get_analysis(self, ticker, mode="swing"):
         daily_data = self.get_historical_price(ticker, 365)
         
@@ -372,6 +410,8 @@ class TechnicalAPIClient(StockbitClient):
                 "mode": "INTRADAY_MTF",
                 "timeframe": "Edge(5m) / Structural(1h) / Macro(D1)",
                 "lastPrice": last_price,
+                "atr14": self._calc_atr(data, 14),
+                "volumeProfilePOC": self._calc_volume_profile(data, 10),
                 "vwap": self._calc_vwap(active_data),
                 "ma9": self._calc_sma(data, 9),
                 "ma21": self._calc_sma(data, 21),
@@ -401,6 +441,8 @@ class TechnicalAPIClient(StockbitClient):
                 "mode": "SHORT_SWING_MTF",
                 "timeframe": "Edge(15m) / Structural(1h) / Macro(D1)",
                 "lastPrice": last_price,
+                "atr14": self._calc_atr(data, 14),
+                "volumeProfilePOC": self._calc_volume_profile(data, 10),
                 "vwap": self._calc_vwap(active_data),
                 "ma10": self._calc_sma(data, 10),
                 "ma20": self._calc_sma(data, 20),
@@ -430,6 +472,8 @@ class TechnicalAPIClient(StockbitClient):
                 "mode": "SWING_MTF",
                 "timeframe": "Edge(4h) / Structural(D1) / Macro(W1)",
                 "lastPrice": last_price,
+                "atr14": self._calc_atr(data, 14),
+                "volumeProfilePOC": self._calc_volume_profile(data, 10),
                 "ma10": self._calc_sma(data, 10),
                 "ma20": self._calc_sma(data, 20),
                 "ma50": self._calc_sma(data, 50),
@@ -456,6 +500,8 @@ class TechnicalAPIClient(StockbitClient):
                 "mode": "LONGTERM_MTF",
                 "timeframe": "Edge(D1) / Structural(W1) / Macro(M1)",
                 "lastPrice": last_price,
+                "atr14": self._calc_atr(data, 14),
+                "volumeProfilePOC": self._calc_volume_profile(data, 10),
                 "ma50": self._calc_sma(data, 50),
                 "ma200": self._calc_sma(data, 200),
                 "rsi14": self._calc_rsi(data, 14),

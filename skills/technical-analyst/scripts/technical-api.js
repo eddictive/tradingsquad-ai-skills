@@ -273,6 +273,46 @@ class TechnicalAPIClient extends StockbitClient {
   // CONTEXT-AWARE ANALYSIS
   // ==========================================
 
+  _calcATR(data, period = 14) {
+    if (!data || data.length < period) return null;
+    let trs = [];
+    for (let i = 1; i < data.length; i++) {
+        let high = parseFloat(data[i].high);
+        let low = parseFloat(data[i].low);
+        let prevClose = parseFloat(data[i-1].close);
+        let tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+        trs.push(tr);
+    }
+    return trs.slice(-period).reduce((a, b) => a + b, 0) / period;
+  }
+
+  _calcVolumeProfile(data, bins = 10) {
+    if (!data || data.length === 0) return null;
+    let max = -Infinity, min = Infinity;
+    for (let c of data) {
+        let h = parseFloat(c.high), l = parseFloat(c.low);
+        if (h > max) max = h;
+        if (l < min) min = l;
+    }
+    let step = (max - min) / bins;
+    if (step === 0) return { poc: data[0].close, supportArea: `${min} - ${max}` };
+    
+    let profile = Array(bins).fill(0).map((_, i) => ({ priceStart: min + i*step, priceEnd: min + (i+1)*step, volume: 0 }));
+    for (let c of data) {
+        let typPrice = (parseFloat(c.high) + parseFloat(c.low) + parseFloat(c.close)) / 3;
+        let vol = parseFloat(c.volume) || 0;
+        let idx = Math.floor((typPrice - min) / step);
+        if (idx >= bins) idx = bins - 1;
+        if (idx < 0) idx = 0;
+        profile[idx].volume += vol;
+    }
+    let poc = profile.reduce((prev, curr) => (prev.volume > curr.volume) ? prev : curr);
+    return {
+        poc: (poc.priceStart + poc.priceEnd) / 2,
+        supportArea: `${poc.priceStart.toFixed(0)} - ${poc.priceEnd.toFixed(0)}`
+    };
+  }
+
   async getAnalysis(ticker, mode = 'swing') {
     let dailyData = [];
     if (['intraday', 'short_swing', 'swing', 'longterm'].includes(mode)) {
@@ -318,6 +358,8 @@ class TechnicalAPIClient extends StockbitClient {
         mode: 'INTRADAY_MTF',
         timeframe: 'Edge(5m) / Structural(1h) / Macro(D1)',
         lastPrice,
+        atr14: this._calcATR(data, 14),
+        volumeProfilePOC: this._calcVolumeProfile(data, 10),
         vwap: this._calcVWAP(activeData),
         ma9: this._calcSMA(data, 9),
         ma21: this._calcSMA(data, 21),
@@ -345,6 +387,8 @@ class TechnicalAPIClient extends StockbitClient {
         mode: 'SHORT_SWING_MTF',
         timeframe: 'Edge(15m) / Structural(1h) / Macro(D1)',
         lastPrice,
+        atr14: this._calcATR(data, 14),
+        volumeProfilePOC: this._calcVolumeProfile(data, 10),
         vwap: this._calcVWAP(activeData),
         ma10: this._calcSMA(data, 10),
         ma20: this._calcSMA(data, 20),
@@ -373,6 +417,8 @@ class TechnicalAPIClient extends StockbitClient {
         mode: 'SWING_MTF',
         timeframe: 'Edge(4h) / Structural(D1) / Macro(W1)',
         lastPrice,
+        atr14: this._calcATR(data, 14),
+        volumeProfilePOC: this._calcVolumeProfile(data, 10),
         ma10: this._calcSMA(data, 10),
         ma20: this._calcSMA(data, 20),
         ma50: this._calcSMA(data, 50),
@@ -399,6 +445,8 @@ class TechnicalAPIClient extends StockbitClient {
         mode: 'LONGTERM_MTF',
         timeframe: 'Edge(D1) / Structural(W1) / Macro(M1)',
         lastPrice,
+        atr14: this._calcATR(data, 14),
+        volumeProfilePOC: this._calcVolumeProfile(data, 10),
         ma50: this._calcSMA(data, 50),
         ma200: this._calcSMA(data, 200),
         rsi14: this._calcRSI(data, 14),
