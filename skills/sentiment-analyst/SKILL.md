@@ -30,7 +30,8 @@ For sentiment data, utilize either `sentiment-api.py` or `sentiment-api.js` in t
 
 ## macro-news.js / macro-news.py
 Retrieves the latest top news headlines from Bloomberg, WSJ, Yahoo Finance, and CNBC (Global and Indonesia).
-Use this to detect major macroeconomic catalysts (e.g., FOMC, Fed rates, Geopolitics, Middle East conflicts affecting Oil & Gas, BOJ, index rebalancing).
+Use this to detect major macroeconomic catalysts (e.g., FOMC, Fed rates, Geopolitics, Middle East conflicts affecting Oil & Gas, BOJ).
+**CRITICAL:** Actively scan for **Index Rebalancing** news (e.g., MSCI, FTSE Russell) and **International Rating Updates** (e.g., Goldman Sachs, JP Morgan, Fitch, Moody's). These reports trigger automated, algorithmic, and massive foreign flow adjustments in the IDX.
 
 ## getAggregatedSentiment(ticker)
 Retrieves a filtered object containing:
@@ -44,7 +45,8 @@ Retrieves a filtered object containing:
 # ANALYSIS FRAMEWORK
 
 ## PART 1 — MACRO & GLOBAL NARRATIVE
-First, run the `macro-news.py` script to detect the overarching global sentiment. Does a geopolitical tension (e.g., Middle East war) threaten oil prices and Indonesian fiscal stability? Is the Fed or BOJ changing interest rates? Determine if the macro environment provides a tailwind or headwind for the IDX (IHSG) and specific sectors (like Energy or Banking).
+First, run the `macro-news.py` script to detect the overarching global sentiment. Does a geopolitical tension (e.g., Middle East war) threaten oil prices and Indonesian fiscal stability? Is the Fed or BOJ changing interest rates? Determine if the macro environment provides a tailwind or headwind for the IDX (IHSG) and specific sectors (like Energy or Banking). 
+**Index Provider Check:** Always check if the stock is being added to, removed from, or having its weighting changed in major global indices (MSCI / FTSE). Addition = Foreign Inflow Catalyst. Removal = Foreign Outflow Catalyst.
 
 ## PART 2 — CATALYST VS NOISE DETECTION
 Scan the stock-specific aggregated data (from `sentiment-api.js`) and classify the narrative:
@@ -82,6 +84,9 @@ Media Hype Level  : Low / Medium / High / Extreme
 ## 2. Macro & Geopolitical Catalysts
 (List 2-3 major global or domestic macro events from the macro news script. Explain how they impact the broader market or this specific sector.)
 - **[Source] - [Headline]**: [Impact Analysis on IHSG/Sector]
+
+## 2b. Index & Rating Updates (MSCI / FTSE / Ratings)
+(If applicable, state any rebalancing or rating upgrades/downgrades by major providers like MSCI, FTSE, Goldman Sachs, or Fitch. If none, state "No recent global rating or index changes detected for this ticker.")
 
 ## 3. Stock-Specific News
 (List 2-3 of the most impactful recent news items for this ticker and explain their actual impact).
