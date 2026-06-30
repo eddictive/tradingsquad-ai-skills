@@ -274,42 +274,104 @@ class TechnicalAPIClient extends StockbitClient {
   // ==========================================
 
   async getAnalysis(ticker, mode = 'swing') {
+    let dailyData = [];
+    if (['intraday', 'short_swing', 'swing', 'longterm'].includes(mode)) {
+        dailyData = await this.getHistoricalPrice(ticker, 365);
+    }
+    
+    const getWeeklyData = (daily) => {
+        let weekly = [];
+        let currentWeek = -1;
+        let agg = null;
+        for (let c of daily) {
+            let d = new Date(c.date || c.datetime);
+            let year = d.getFullYear();
+            let start = new Date(year, 0, 1);
+            let week = Math.ceil((((d - start) / 86400000) + start.getDay() + 1) / 7);
+            let weekId = year * 100 + week;
+            if (weekId !== currentWeek) {
+                if (agg) weekly.push(agg);
+                currentWeek = weekId;
+                agg = { ...c, high: parseFloat(c.high), low: parseFloat(c.low), close: parseFloat(c.close), open: parseFloat(c.open) };
+            } else {
+                agg.high = Math.max(agg.high, parseFloat(c.high));
+                agg.low = Math.min(agg.low, parseFloat(c.low));
+                agg.close = parseFloat(c.close);
+            }
+        }
+        if (agg) weekly.push(agg);
+        return weekly;
+    };
+
     if (mode === 'intraday') {
       const data = await this.getIntradayPrice(ticker, '5m', 3);
+      const h1Data = await this.getIntradayPrice(ticker, '1h', 7);
       if (data.length === 0) return { error: "No intraday data found" };
       
       const lastPrice = data[data.length - 1].close;
-      
       const todayStr = new Date().toISOString().split('T')[0];
       const todayData = data.filter(c => (c.time || c.datetime || '').startsWith(todayStr));
       const activeData = todayData.length > 0 ? todayData : data;
       const hl = this._getHighLow(activeData);
       
       return {
-        mode: 'INTRADAY',
-        timeframe: '5m',
+        mode: 'INTRADAY_MTF',
+        timeframe: 'Edge(5m) / Structural(1h) / Macro(D1)',
         lastPrice,
         vwap: this._calcVWAP(activeData),
         ma9: this._calcSMA(data, 9),
         ma21: this._calcSMA(data, 21),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
-        smc: this._calcSMC(data),
+        SMC_Macro_D1: dailyData.length > 0 ? this._calcSMC(dailyData) : null,
+        SMC_Structural_H1: h1Data.length > 0 ? this._calcSMC(h1Data) : null,
+        SMC_Edge_M5: this._calcSMC(data),
         dayHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
     } 
+    else if (mode === 'short_swing') {
+      const data = await this.getIntradayPrice(ticker, '15m', 7);
+      const h1Data = await this.getIntradayPrice(ticker, '1h', 7);
+      if (data.length === 0) return { error: "No short_swing data found" };
+      
+      const lastPrice = data[data.length - 1].close;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayData = data.filter(c => (c.time || c.datetime || '').startsWith(todayStr));
+      const activeData = todayData.length > 0 ? todayData : data.slice(-28);
+      const hl = this._getHighLow(data);
+      
+      return {
+        mode: 'SHORT_SWING_MTF',
+        timeframe: 'Edge(15m) / Structural(1h) / Macro(D1)',
+        lastPrice,
+        vwap: this._calcVWAP(activeData),
+        ma10: this._calcSMA(data, 10),
+        ma20: this._calcSMA(data, 20),
+        ma50: this._calcSMA(data, 50),
+        rsi14: this._calcRSI(data, 14),
+        macd: this._calcMACD(data),
+        bollingerBands: this._calcBollingerBands(data),
+        SMC_Macro_D1: dailyData.length > 0 ? this._calcSMC(dailyData) : null,
+        SMC_Structural_H1: h1Data.length > 0 ? this._calcSMC(h1Data) : null,
+        SMC_Edge_M15: this._calcSMC(data),
+        swingHighLow: hl,
+        fibonacci: this._calcFibonacci(hl.high, hl.low)
+      };
+    }
     else if (mode === 'swing') {
       const data = await this.getHistoricalPrice(ticker, 90);
+      const h4Data = await this.getIntradayPrice(ticker, '4h', 30);
+      const weeklyData = getWeeklyData(dailyData);
+      
       if (data.length === 0) return { error: "No historical data found" };
       
       const lastPrice = data[data.length - 1].close;
       const hl = this._getHighLow(data);
       
       return {
-        mode: 'SWING',
-        timeframe: 'Daily',
-        period: '3 Months',
+        mode: 'SWING_MTF',
+        timeframe: 'Edge(4h) / Structural(D1) / Macro(W1)',
         lastPrice,
         ma10: this._calcSMA(data, 10),
         ma20: this._calcSMA(data, 20),
@@ -317,61 +379,41 @@ class TechnicalAPIClient extends StockbitClient {
         rsi14: this._calcRSI(data, 14),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
-        smc: this._calcSMC(data),
+        SMC_Macro_W1: weeklyData.length > 0 ? this._calcSMC(weeklyData) : null,
+        SMC_Structural_D1: this._calcSMC(data),
+        SMC_Edge_H4: h4Data.length > 0 ? this._calcSMC(h4Data) : null,
         swingHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
     }
     else if (mode === 'longterm') {
       const data = await this.getHistoricalPrice(ticker, 365);
+      const weeklyData = getWeeklyData(dailyData);
+      
       if (data.length === 0) return { error: "No historical data found" };
       
       const lastPrice = data[data.length - 1].close;
       const hl = this._getHighLow(data);
       
       return {
-        mode: 'LONG-TERM',
-        timeframe: 'Daily',
-        period: '1 Year',
+        mode: 'LONGTERM_MTF',
+        timeframe: 'Edge(D1) / Structural(W1) / Macro(M1)',
         lastPrice,
         ma50: this._calcSMA(data, 50),
         ma200: this._calcSMA(data, 200),
         rsi14: this._calcRSI(data, 14),
         macd: this._calcMACD(data),
         bollingerBands: this._calcBollingerBands(data),
-        smc: this._calcSMC(data),
+        SMC_Macro_W1: weeklyData.length > 0 ? this._calcSMC(weeklyData) : null,
+        SMC_Structural_W1: weeklyData.length > 0 ? this._calcSMC(weeklyData) : null,
+        SMC_Edge_D1: this._calcSMC(data),
         yearHighLow: hl,
         fibonacci: this._calcFibonacci(hl.high, hl.low)
       };
     }
-    else if (mode === 'short_swing') {
-      const data = await this.getIntradayPrice(ticker, '1h', 7);
-      if (data.length === 0) return { error: "No short_swing data found" };
-      
-      const lastPrice = data[data.length - 1].close;
-      const hl = this._getHighLow(data);
-      
-      return {
-        mode: 'SHORT_SWING',
-        timeframe: '1h',
-        period: '7 Days',
-        lastPrice,
-        vwap: this._calcVWAP(data),
-        ma10: this._calcSMA(data, 10),
-        ma20: this._calcSMA(data, 20),
-        ma50: this._calcSMA(data, 50),
-        rsi14: this._calcRSI(data, 14),
-        macd: this._calcMACD(data),
-        bollingerBands: this._calcBollingerBands(data),
-        swingHighLow: hl,
-        fibonacci: this._calcFibonacci(hl.high, hl.low)
-      };
-    }
-    else {
-      throw new Error("Invalid mode. Use 'intraday', 'short_swing', 'swing', or 'longterm'.");
-    }
   }
 }
+
 
 if (require.main === module) {
   (async () => {

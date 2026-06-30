@@ -328,104 +328,148 @@ class TechnicalAPIClient(StockbitClient):
     # ==========================================
 
     def get_analysis(self, ticker, mode="swing"):
+        daily_data = self.get_historical_price(ticker, 365)
+        
+        def get_weekly_data(daily):
+            weekly = []
+            current_week = -1
+            agg = None
+            for c in daily:
+                date_str = c.get("date") or c.get("datetime")
+                if not date_str: continue
+                try:
+                    d = datetime.strptime(date_str.split("T")[0], "%Y-%m-%d")
+                except:
+                    continue
+                week_id = d.isocalendar()[0] * 100 + d.isocalendar()[1]
+                if week_id != current_week:
+                    if agg: weekly.append(agg)
+                    current_week = week_id
+                    agg = c.copy()
+                    agg["high"] = float(c["high"])
+                    agg["low"] = float(c["low"])
+                    agg["close"] = float(c["close"])
+                else:
+                    agg["high"] = max(agg["high"], float(c["high"]))
+                    agg["low"] = min(agg["low"], float(c["low"]))
+                    agg["close"] = float(c["close"])
+            if agg: weekly.append(agg)
+            return weekly
+
         if mode == "intraday":
             data = self.get_intraday_price(ticker, "5m", 3)
+            h1_data = self.get_intraday_price(ticker, "1h", 7)
             if not data:
                 return {"error": "No intraday data found"}
                 
             last_price = float(data[-1].get("close", 0))
-            
             today_str = datetime.now().strftime("%Y-%m-%d")
             today_data = [c for c in data if str(c.get("date") or c.get("datetime") or "").startswith(today_str)]
             active_data = today_data if today_data else data
             hl = self._get_high_low(active_data)
             
             return {
-                "mode": "INTRADAY",
-                "timeframe": "5m",
+                "mode": "INTRADAY_MTF",
+                "timeframe": "Edge(5m) / Structural(1h) / Macro(D1)",
                 "lastPrice": last_price,
                 "vwap": self._calc_vwap(active_data),
                 "ma9": self._calc_sma(data, 9),
                 "ma21": self._calc_sma(data, 21),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
-                "smc": self._calc_smc(data),
+                "SMC_Macro_D1": self._calc_smc(daily_data) if daily_data else None,
+                "SMC_Structural_H1": self._calc_smc(h1_data) if h1_data else None,
+                "SMC_Edge_M5": self._calc_smc(data),
                 "dayHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
             
-        elif mode == "swing":
-            data = self.get_historical_price(ticker, 90)
-            if not data:
-                return {"error": "No historical data found"}
-                
-            last_price = float(data[-1].get("close", 0))
-            hl = self._get_high_low(data)
-            
-            return {
-                "mode": "SWING",
-                "timeframe": "Daily",
-                "period": "3 Months",
-                "lastPrice": last_price,
-                "ma10": self._calc_sma(data, 10),
-                "ma20": self._calc_sma(data, 20),
-                "ma50": self._calc_sma(data, 50),
-                "rsi14": self._calc_rsi(data, 14),
-                "macd": self._calc_macd(data),
-                "bollingerBands": self._calc_bollinger_bands(data),
-                "smc": self._calc_smc(data),
-                "swingHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
-            }
-            
-        elif mode == "longterm":
-            data = self.get_historical_price(ticker, 365)
-            if not data:
-                return {"error": "No historical data found"}
-                
-            last_price = float(data[-1].get("close", 0))
-            hl = self._get_high_low(data)
-            
-            return {
-                "mode": "LONG-TERM",
-                "timeframe": "Daily",
-                "period": "1 Year",
-                "lastPrice": last_price,
-                "ma50": self._calc_sma(data, 50),
-                "ma200": self._calc_sma(data, 200),
-                "rsi14": self._calc_rsi(data, 14),
-                "macd": self._calc_macd(data),
-                "bollingerBands": self._calc_bollinger_bands(data),
-                "smc": self._calc_smc(data),
-                "yearHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
-            }
         elif mode == "short_swing":
-            data = self.get_intraday_price(ticker, "1h", 7)
+            data = self.get_intraday_price(ticker, "15m", 7)
+            h1_data = self.get_intraday_price(ticker, "1h", 7)
             if not data:
                 return {"error": "No short_swing data found"}
                 
             last_price = float(data[-1].get("close", 0))
             hl = self._get_high_low(data)
             
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_data = [c for c in data if str(c.get("date") or c.get("datetime") or "").startswith(today_str)]
+            active_data = today_data if today_data else data[-28:]
+            
             return {
-                "mode": "SHORT_SWING",
-                "timeframe": "1h",
-                "period": "7 Days",
+                "mode": "SHORT_SWING_MTF",
+                "timeframe": "Edge(15m) / Structural(1h) / Macro(D1)",
                 "lastPrice": last_price,
-                "vwap": self._calc_vwap(data),
+                "vwap": self._calc_vwap(active_data),
                 "ma10": self._calc_sma(data, 10),
                 "ma20": self._calc_sma(data, 20),
                 "ma50": self._calc_sma(data, 50),
                 "rsi14": self._calc_rsi(data, 14),
                 "macd": self._calc_macd(data),
                 "bollingerBands": self._calc_bollinger_bands(data),
-                "smc": self._calc_smc(data),
+                "SMC_Macro_D1": self._calc_smc(daily_data) if daily_data else None,
+                "SMC_Structural_H1": self._calc_smc(h1_data) if h1_data else None,
+                "SMC_Edge_M15": self._calc_smc(data),
                 "swingHighLow": hl,
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+            }
+            
+        elif mode == "swing":
+            data = self.get_historical_price(ticker, 90)
+            h4_data = self.get_intraday_price(ticker, "4h", 30)
+            weekly_data = get_weekly_data(daily_data)
+            
+            if not data:
+                return {"error": "No historical data found"}
+                
+            last_price = float(data[-1].get("close", 0))
+            hl = self._get_high_low(data)
+            
+            return {
+                "mode": "SWING_MTF",
+                "timeframe": "Edge(4h) / Structural(D1) / Macro(W1)",
+                "lastPrice": last_price,
+                "ma10": self._calc_sma(data, 10),
+                "ma20": self._calc_sma(data, 20),
+                "ma50": self._calc_sma(data, 50),
+                "rsi14": self._calc_rsi(data, 14),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
+                "SMC_Macro_W1": self._calc_smc(weekly_data) if weekly_data else None,
+                "SMC_Structural_D1": self._calc_smc(data),
+                "SMC_Edge_H4": self._calc_smc(h4_data) if h4_data else None,
+                "swingHighLow": hl,
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+            }
+            
+        elif mode == "longterm":
+            data = self.get_historical_price(ticker, 365)
+            weekly_data = get_weekly_data(daily_data)
+            if not data:
+                return {"error": "No historical data found"}
+                
+            last_price = float(data[-1].get("close", 0))
+            hl = self._get_high_low(data)
+            
+            return {
+                "mode": "LONGTERM_MTF",
+                "timeframe": "Edge(D1) / Structural(W1) / Macro(M1)",
+                "lastPrice": last_price,
+                "ma50": self._calc_sma(data, 50),
+                "ma200": self._calc_sma(data, 200),
+                "rsi14": self._calc_rsi(data, 14),
+                "macd": self._calc_macd(data),
+                "bollingerBands": self._calc_bollinger_bands(data),
+                "SMC_Macro_W1": self._calc_smc(weekly_data) if weekly_data else None,
+                "SMC_Structural_W1": self._calc_smc(weekly_data) if weekly_data else None,
+                "SMC_Edge_D1": self._calc_smc(data),
+                "yearHighLow": hl,
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
             }
         else:
             raise ValueError("Invalid mode. Use 'intraday', 'short_swing', 'swing', or 'longterm'.")
+
 
 if __name__ == "__main__":
     api = TechnicalAPIClient()
