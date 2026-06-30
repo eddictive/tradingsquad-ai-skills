@@ -35,9 +35,15 @@ Look for:
 *   `Return on Equity (TTM)` (ROE)
 *   `Dividend Yield`
 *   `Earnings Yield`
+*   **`EBITDA (TTM)` and `EV to EBITDA (TTM)`** (Crucial for capital-intensive sectors)
+*   **`Free cash flow (TTM)`**
+*   **`Current Ratio (Quarter)`**
 
-## getFinancialReport(ticker, type)
-Retrieves Income Statement, Balance Sheet, and Cash Flow data (yearly or quarterly).
+## getFinancialReport(ticker, reportType, statementType)
+Retrieves detailed financial statements.
+*   `reportType`: `1` (Income Statement), `2` (Balance Sheet), `3` (Cash Flow)
+*   `statementType`: `1` (Quarterly), `2` (Annual)
+Use `reportType=3` to analyze Operating Cash Flow, Capex, and Free Cash Flow generation!
 
 ---
 
@@ -72,6 +78,7 @@ Always return your analysis in this exact markdown format:
 ## 1. Valuation Metrics
 ```
 Current PE Ratio (TTM): 
+EV to EBITDA (TTM)    : 
 Price to Book (PBV)   : 
 Price to FCF          : 
 Dividend Yield        : 
@@ -87,7 +94,8 @@ Valuation Score       : 0-100
 Return on Equity (ROE): 
 Net Profit Margin     : 
 Debt-to-Equity (DER)  : 
-Free Cash Flow Status : 
+Current Ratio         : 
+Free Cash Flow (TTM)  : 
 ```
 
 ## 3. Fair Value (Nilai Wajar) Calculation

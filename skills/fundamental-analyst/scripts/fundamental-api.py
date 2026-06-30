@@ -15,12 +15,14 @@ class FundamentalAPIClient(StockbitClient):
         res = self._get_exodus(f"/keystats/ratio/v1/{ticker}", params=params)
         return res.get("data", {})
 
-    def get_financial_report(self, ticker: str, report_type: str = "yearly", limit: int = 5):
+    def get_financial_report(self, ticker: str, report_type: int = 1, statement_type: int = 2):
         """
         Fetch Financial Reports
+        report_type: 1 (Income Statement), 2 (Balance Sheet), 3 (Cash Flow)
+        statement_type: 1 (Quarterly), 2 (Annual)
         """
-        params = {"type": report_type, "limit": limit}
-        res = self._get_exodus(f"/financials/report/v1/{ticker}", params=params)
+        params = {"symbol": ticker, "data_type": 1, "report_type": report_type, "statement_type": statement_type}
+        res = self._get_exodus("/findata-view/company/financial", params=params)
         return res.get("data", {})
 
 if __name__ == "__main__":

@@ -12,11 +12,12 @@ class FundamentalAPIClient extends StockbitClient {
 
   /**
    * Fetch Financial Reports
-   * type can be 'yearly' or 'quarterly'
+   * reportType: 1 (Income Statement), 2 (Balance Sheet), 3 (Cash Flow)
+   * statementType: 1 (Quarterly), 2 (Annual)
    */
-  async getFinancialReport(ticker, type = 'yearly', limit = 5) {
-    const params = { type, limit };
-    const res = await this._getExodus(`/financials/report/v1/${ticker}`, params);
+  async getFinancialReport(ticker, reportType = 1, statementType = 2) {
+    const params = { symbol: ticker, data_type: 1, report_type: reportType, statement_type: statementType };
+    const res = await this._getExodus(`/findata-view/company/financial`, params);
     return res.data || {};
   }
 }
