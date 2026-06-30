@@ -20,6 +20,7 @@ class StockbitClient {
     this.refreshToken = null;
     this.accessExpiredAt = null;
     this.refreshExpiredAt = null;
+    this.username = null;
 
     this.headers = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -38,18 +39,42 @@ class StockbitClient {
     return (expiry - now) < (5 * 60 * 1000);
   }
 
-  _saveToken(access, refresh) {
+  _saveToken(access, refresh, userObj = null) {
+    let currentUser = userObj;
+    if (!currentUser && fs.existsSync(this.tokenFile)) {
+       try {
+         const existing = JSON.parse(fs.readFileSync(this.tokenFile, 'utf8'));
+         if (existing.state && existing.state.user) {
+            currentUser = existing.state.user;
+         }
+       } catch(e) {}
+    }
+
     const data = {
-      access_token: access.token,
-      access_expired_at: access.expired_at || access.expires_at,
-      refresh_token: refresh.token,
-      refresh_expired_at: refresh.expired_at || refresh.expires_at
+      state: {
+        access: {
+          token: access.token,
+          expired_at: access.expired_at || access.expires_at
+        },
+        refresh: {
+          token: refresh.token,
+          expired_at: refresh.expired_at || refresh.expires_at
+        }
+      },
+      version: 0
     };
+    
+    if (currentUser) {
+      data.state.user = currentUser;
+      this.username = currentUser.username;
+    }
+
     fs.writeFileSync(this.tokenFile, JSON.stringify(data, null, 2));
-    this.accessToken = data.access_token;
-    this.refreshToken = data.refresh_token;
-    this.accessExpiredAt = data.access_expired_at;
-    this.refreshExpiredAt = data.refresh_expired_at;
+    
+    this.accessToken = access.token;
+    this.refreshToken = refresh.token;
+    this.accessExpiredAt = access.expired_at || access.expires_at;
+    this.refreshExpiredAt = refresh.expired_at || refresh.expires_at;
     this.headers["Authorization"] = `Bearer ${this.accessToken}`;
   }
 
@@ -93,22 +118,36 @@ class StockbitClient {
       
       const data = JSON.parse(content);
       
-      // Auto-migrate raw JSON payload from LocalStorage (if provided by user)
-      if (data.state && data.state.access && data.state.refresh) {
-         this._saveToken(data.state.access, data.state.refresh);
-         return true;
-      }
+      // Support backwards compatibility or flattened tokens
+      let accessObj, refreshObj;
       
-      if (!data.access_token) return false;
+      if (data.state && data.state.access && data.state.refresh) {
+        accessObj = data.state.access;
+        refreshObj = data.state.refresh;
+      } else if (data.access_token && data.refresh_token) {
+        accessObj = { token: data.access_token, expired_at: data.access_expired_at };
+        refreshObj = { token: data.refresh_token, expired_at: data.refresh_expired_at };
+      } else {
+        return false;
+      }
 
-      this.accessToken = data.access_token;
-      this.refreshToken = data.refresh_token;
-      this.accessExpiredAt = data.access_expired_at;
-      this.refreshExpiredAt = data.refresh_expired_at;
+      this.accessToken = accessObj.token;
+      this.refreshToken = refreshObj.token;
+      this.accessExpiredAt = accessObj.expired_at || accessObj.expires_at;
+      this.refreshExpiredAt = refreshObj.expired_at || refreshObj.expires_at;
       this.headers["Authorization"] = `Bearer ${this.accessToken}`;
+
+      if (data.state && data.state.user && data.state.user.username) {
+        this.username = data.state.user.username;
+      }
 
       if (this._isExpired(this.accessExpiredAt)) {
         await this._refreshAccessToken();
+      } else {
+        // If it was in the old format, upgrade it to the new format by saving
+        if (!data.state) {
+            this._saveToken(accessObj, refreshObj);
+        }
       }
       return true;
     } catch (e) {
@@ -159,6 +198,23 @@ Paste it into: ${path.resolve(this.tokenFile)}`;
     if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
     return response.json();
   }
+
+  async getProfile() {
+    let username = this.username || process.env.STOCKBIT_USERNAME;
+    if (!username) {
+      try {
+        const envContent = fs.readFileSync(path.join(process.cwd(), '.env'), 'utf8');
+        const match = envContent.match(/^STOCKBIT_USERNAME=(.*)$/m);
+        if (match) username = match[1].trim();
+      } catch (e) {}
+    }
+    
+    if (!username) {
+      throw new Error("Username is required to fetch profile. Missing in token and .env (STOCKBIT_USERNAME)");
+    }
+    const res = await this._getExodus(`/user/profile/${username}`);
+    return res;
+  }
 }
 
 if (require.main === module) {
@@ -167,6 +223,8 @@ if (require.main === module) {
     try {
       await client.login();
       console.log("✅ Stockbit BYOT Authentication Successful! Your token is valid.");
+      const profile = await client.getProfile();
+      console.log(`👤 Profile Found: ${profile.data.profile.fullname} (@${profile.data.profile.username})`);
     } catch (e) {
       console.error(`❌ ${e.message}`);
     }
