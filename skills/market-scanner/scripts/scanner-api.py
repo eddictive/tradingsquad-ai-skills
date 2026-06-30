@@ -29,23 +29,37 @@ class ScannerAPIClient(StockbitClient):
             })
         return result
 
-    def get_top_stock(self, start_date, end_date, investor_type="INVESTOR_TYPE_FOREIGN"):
-        params = {
-            "start": start_date,
-            "end": end_date,
-            "investor_type": investor_type,
-            "market_type": "MARKET_TYPE_REGULER",
-            "value_type": "VALUE_TYPE_NET",
-            "page": 1
-        }
-        response = self._get_exodus("/order-trade/top-stock", params)
+    def get_top_stock(self, start_date, end_date, investor_type="INVESTOR_TYPE_FOREIGN", max_pages=3):
+        all_top_buy = []
+        all_top_sell = []
         
-        top_buy = response.get("data", {}).get("top_buy", [])[:10]
-        top_sell = response.get("data", {}).get("top_sell", [])[:10]
-        
+        for page in range(1, max_pages + 1):
+            params = {
+                "start": start_date,
+                "end": end_date,
+                "investor_type": investor_type,
+                "market_type": "MARKET_TYPE_REGULER",
+                "value_type": "VALUE_TYPE_NET",
+                "page": page
+            }
+            response = self._get_exodus("/order-trade/top-stock", params)
+            data = response.get("data", {})
+            if not data:
+                break
+                
+            top_buy_page = data.get("top_buy", [])
+            top_sell_page = data.get("top_sell", [])
+            
+            if top_buy_page: all_top_buy.extend(top_buy_page)
+            if top_sell_page: all_top_sell.extend(top_sell_page)
+            
+            if not top_buy_page and not top_sell_page:
+                break
+                
+        limit = max_pages * 10
         return {
-            "topBuy": [{"ticker": b["code"], "value": b["value"]["formatted"], "avg_price": b["average"]["formatted"]} for b in top_buy],
-            "topSell": [{"ticker": s["code"], "value": s["value"]["formatted"], "avg_price": s["average"]["formatted"]} for s in top_sell]
+            "topBuy": [{"ticker": b["code"], "value": b["value"]["formatted"], "avg_price": b["average"]["formatted"]} for b in all_top_buy[:limit]],
+            "topSell": [{"ticker": s["code"], "value": s["value"]["formatted"], "avg_price": s["average"]["formatted"]} for s in all_top_sell[:limit]]
         }
 
     def run_screener(self, template="ACCUMULATION"):

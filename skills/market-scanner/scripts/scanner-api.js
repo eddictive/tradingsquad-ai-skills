@@ -28,25 +28,39 @@ class ScannerAPIClient extends StockbitClient {
   /**
    * Fetch Top Stocks by Order Trade
    */
-  async getTopStock(startDate, endDate, investorType = 'INVESTOR_TYPE_FOREIGN') {
-    const params = {
-      start: startDate,
-      end: endDate,
-      investor_type: investorType,
-      market_type: 'MARKET_TYPE_REGULER',
-      value_type: 'VALUE_TYPE_NET',
-      page: 1
-    };
-    const response = await this._getExodus('/order-trade/top-stock', params);
-    if (!response.data || !response.data.top_buy) return { buy: [], sell: [] };
+  async getTopStock(startDate, endDate, investorType = 'INVESTOR_TYPE_FOREIGN', maxPages = 3) {
+    let allTopBuy = [];
+    let allTopSell = [];
     
-    const topBuy = response.data.top_buy.slice(0, 10).map(b => ({
+    for (let page = 1; page <= maxPages; page++) {
+        const params = {
+          start: startDate,
+          end: endDate,
+          investor_type: investorType,
+          market_type: 'MARKET_TYPE_REGULER',
+          value_type: 'VALUE_TYPE_NET',
+          page: page
+        };
+        const response = await this._getExodus('/order-trade/top-stock', params);
+        if (!response.data) break;
+        
+        if (response.data.top_buy) {
+            allTopBuy = allTopBuy.concat(response.data.top_buy);
+        }
+        if (response.data.top_sell) {
+            allTopSell = allTopSell.concat(response.data.top_sell);
+        }
+        
+        if (!response.data.top_buy && !response.data.top_sell) break;
+    }
+    
+    const topBuy = allTopBuy.slice(0, maxPages * 10).map(b => ({
       ticker: b.code,
       value: b.value.formatted,
       avg_price: b.average.formatted
     }));
     
-    const topSell = (response.data.top_sell || []).slice(0, 10).map(s => ({
+    const topSell = allTopSell.slice(0, maxPages * 10).map(s => ({
       ticker: s.code,
       value: s.value.formatted,
       avg_price: s.average.formatted
