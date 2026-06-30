@@ -313,6 +313,70 @@ class TechnicalAPIClient extends StockbitClient {
     };
   }
 
+  _calcSMCBacktest(data) {
+    if (!data || data.length < 20) return null;
+    let bullishFVGs = [], bearishFVGs = [];
+    
+    for (let i = 2; i < data.length; i++) {
+        let low_i = parseFloat(data[i].low), high_i_2 = parseFloat(data[i-2].high);
+        let high_i = parseFloat(data[i].high), low_i_2 = parseFloat(data[i-2].low);
+        if (low_i > high_i_2) bullishFVGs.push({ index: i, top: low_i, bottom: high_i_2, mitigated: false, result: null });
+        if (high_i < low_i_2) bearishFVGs.push({ index: i, top: low_i_2, bottom: high_i, mitigated: false, result: null });
+    }
+    
+    for (let fvg of bullishFVGs) {
+        let entry = fvg.top, sl = fvg.bottom, risk = entry - sl;
+        if (risk <= 0) continue;
+        let target = entry + (risk * 1.5);
+        for (let j = fvg.index + 1; j < data.length; j++) {
+            let cLow = parseFloat(data[j].low), cHigh = parseFloat(data[j].high);
+            if (!fvg.mitigated) {
+                if (cLow <= entry) {
+                    fvg.mitigated = true;
+                    if (cLow <= sl) { fvg.result = 'loss'; break; }
+                    else if (cHigh >= target) { fvg.result = 'win'; break; }
+                }
+            } else {
+                if (cLow <= sl) { fvg.result = 'loss'; break; }
+                if (cHigh >= target) { fvg.result = 'win'; break; }
+            }
+        }
+    }
+
+    for (let fvg of bearishFVGs) {
+        let entry = fvg.bottom, sl = fvg.top, risk = sl - entry;
+        if (risk <= 0) continue;
+        let target = entry - (risk * 1.5);
+        for (let j = fvg.index + 1; j < data.length; j++) {
+            let cLow = parseFloat(data[j].low), cHigh = parseFloat(data[j].high);
+            if (!fvg.mitigated) {
+                if (cHigh >= entry) {
+                    fvg.mitigated = true;
+                    if (cHigh >= sl) { fvg.result = 'loss'; break; }
+                    else if (cLow <= target) { fvg.result = 'win'; break; }
+                }
+            } else {
+                if (cHigh >= sl) { fvg.result = 'loss'; break; }
+                if (cLow <= target) { fvg.result = 'win'; break; }
+            }
+        }
+    }
+    
+    let bullMit = bullishFVGs.filter(f => f.mitigated && f.result !== null);
+    let bullWins = bullMit.filter(f => f.result === 'win').length;
+    let bullRate = bullMit.length > 0 ? ((bullWins / bullMit.length) * 100).toFixed(1) : 0;
+    
+    let bearMit = bearishFVGs.filter(f => f.mitigated && f.result !== null);
+    let bearWins = bearMit.filter(f => f.result === 'win').length;
+    let bearRate = bearMit.length > 0 ? ((bearWins / bearMit.length) * 100).toFixed(1) : 0;
+    
+    return {
+        bullishFVG: { events: bullMit.length, winRate: bullRate + "%" },
+        bearishFVG: { events: bearMit.length, winRate: bearRate + "%" },
+        note: "Win criteria = 1.5R, SL = FVG Extreme"
+    };
+  }
+
   async getAnalysis(ticker, mode = 'swing') {
     let dailyData = [];
     if (['intraday', 'short_swing', 'swing', 'longterm'].includes(mode)) {
@@ -369,7 +433,8 @@ class TechnicalAPIClient extends StockbitClient {
         SMC_Structural_H1: h1Data.length > 0 ? this._calcSMC(h1Data) : null,
         SMC_Edge_M5: this._calcSMC(data),
         dayHighLow: hl,
-        fibonacci: this._calcFibonacci(hl.high, hl.low)
+        fibonacci: this._calcFibonacci(hl.high, hl.low),
+        historicalFVGWinRate: dailyData.length > 0 ? this._calcSMCBacktest(dailyData) : null
       };
     } 
     else if (mode === 'short_swing') {
@@ -400,7 +465,8 @@ class TechnicalAPIClient extends StockbitClient {
         SMC_Structural_H1: h1Data.length > 0 ? this._calcSMC(h1Data) : null,
         SMC_Edge_M15: this._calcSMC(data),
         swingHighLow: hl,
-        fibonacci: this._calcFibonacci(hl.high, hl.low)
+        fibonacci: this._calcFibonacci(hl.high, hl.low),
+        historicalFVGWinRate: dailyData.length > 0 ? this._calcSMCBacktest(dailyData) : null
       };
     }
     else if (mode === 'swing') {
@@ -429,7 +495,8 @@ class TechnicalAPIClient extends StockbitClient {
         SMC_Structural_D1: this._calcSMC(data),
         SMC_Edge_H4: h4Data.length > 0 ? this._calcSMC(h4Data) : null,
         swingHighLow: hl,
-        fibonacci: this._calcFibonacci(hl.high, hl.low)
+        fibonacci: this._calcFibonacci(hl.high, hl.low),
+        historicalFVGWinRate: dailyData.length > 0 ? this._calcSMCBacktest(dailyData) : null
       };
     }
     else if (mode === 'longterm') {
@@ -456,7 +523,8 @@ class TechnicalAPIClient extends StockbitClient {
         SMC_Structural_W1: weeklyData.length > 0 ? this._calcSMC(weeklyData) : null,
         SMC_Edge_D1: this._calcSMC(data),
         yearHighLow: hl,
-        fibonacci: this._calcFibonacci(hl.high, hl.low)
+        fibonacci: this._calcFibonacci(hl.high, hl.low),
+        historicalFVGWinRate: dailyData.length > 0 ? this._calcSMCBacktest(dailyData) : null
       };
     }
   }

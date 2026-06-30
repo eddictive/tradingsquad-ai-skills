@@ -170,6 +170,9 @@ Generate Bull Case, Base Case, and Bear Case with specific breakouts, targets, a
 * **Volume Profile (VRVP) / Point of Control:**
   - Always map the price relative to the `volumeProfilePOC` provided by Technical Analyst. The POC is the ultimate magnet/support level. If the price is above POC, the structure is heavily defended by institutions.
 
+* **Historical FVG Backtest Score:**
+  - Review the `historicalFVGWinRate` from the Technical Analyst. If the historical Win Rate for a Bullish FVG is high (e.g. >40% at 1.5R is very good), mention this statistical edge to the user.
+
 ## PART 7 — RISK MANAGEMENT
 * **Stop Loss & Volatility (ATR):**
   - DO NOT set Stop Loss exactly at the Swing Low or FVG edge. Use the `atr14` value from the Technical Analyst to avoid liquidity sweeps.

@@ -365,6 +365,90 @@ class TechnicalAPIClient(StockbitClient):
             "supportArea": f"{poc['priceStart']:.0f} - {poc['priceEnd']:.0f}"
         }
 
+    def _calc_smc_backtest(self, data):
+        if not data or len(data) < 20: return None
+        bullish_fvgs = []
+        bearish_fvgs = []
+        
+        for i in range(2, len(data)):
+            low_i = float(data[i].get("low", 0))
+            high_i_2 = float(data[i-2].get("high", 0))
+            high_i = float(data[i].get("high", 0))
+            low_i_2 = float(data[i-2].get("low", 0))
+            
+            if low_i > high_i_2:
+                bullish_fvgs.append({"index": i, "top": low_i, "bottom": high_i_2, "mitigated": False, "result": None})
+            if high_i < low_i_2:
+                bearish_fvgs.append({"index": i, "top": low_i_2, "bottom": high_i, "mitigated": False, "result": None})
+                
+        for fvg in bullish_fvgs:
+            entry = fvg["top"]
+            sl = fvg["bottom"]
+            risk = entry - sl
+            if risk <= 0: continue
+            target = entry + (risk * 1.5)
+            
+            for j in range(fvg["index"] + 1, len(data)):
+                c_low = float(data[j].get("low", 0))
+                c_high = float(data[j].get("high", 0))
+                if not fvg["mitigated"]:
+                    if c_low <= entry:
+                        fvg["mitigated"] = True
+                        if c_low <= sl:
+                            fvg["result"] = "loss"
+                            break
+                        elif c_high >= target:
+                            fvg["result"] = "win"
+                            break
+                else:
+                    if c_low <= sl:
+                        fvg["result"] = "loss"
+                        break
+                    if c_high >= target:
+                        fvg["result"] = "win"
+                        break
+                        
+        for fvg in bearish_fvgs:
+            entry = fvg["bottom"]
+            sl = fvg["top"]
+            risk = sl - entry
+            if risk <= 0: continue
+            target = entry - (risk * 1.5)
+            
+            for j in range(fvg["index"] + 1, len(data)):
+                c_low = float(data[j].get("low", 0))
+                c_high = float(data[j].get("high", 0))
+                if not fvg["mitigated"]:
+                    if c_high >= entry:
+                        fvg["mitigated"] = True
+                        if c_high >= sl:
+                            fvg["result"] = "loss"
+                            break
+                        elif c_low <= target:
+                            fvg["result"] = "win"
+                            break
+                else:
+                    if c_high >= sl:
+                        fvg["result"] = "loss"
+                        break
+                    if c_low <= target:
+                        fvg["result"] = "win"
+                        break
+                        
+        bull_mit = [f for f in bullish_fvgs if f["mitigated"] and f["result"] is not None]
+        bull_wins = len([f for f in bull_mit if f["result"] == "win"])
+        bull_rate = f"{(bull_wins / len(bull_mit) * 100):.1f}%" if bull_mit else "0.0%"
+        
+        bear_mit = [f for f in bearish_fvgs if f["mitigated"] and f["result"] is not None]
+        bear_wins = len([f for f in bear_mit if f["result"] == "win"])
+        bear_rate = f"{(bear_wins / len(bear_mit) * 100):.1f}%" if bear_mit else "0.0%"
+        
+        return {
+            "bullishFVG": {"events": len(bull_mit), "winRate": bull_rate},
+            "bearishFVG": {"events": len(bear_mit), "winRate": bear_rate},
+            "note": "Win criteria = 1.5R, SL = FVG Extreme"
+        }
+
     def get_analysis(self, ticker, mode="swing"):
         daily_data = self.get_historical_price(ticker, 365)
         
@@ -421,7 +505,8 @@ class TechnicalAPIClient(StockbitClient):
                 "SMC_Structural_H1": self._calc_smc(h1_data) if h1_data else None,
                 "SMC_Edge_M5": self._calc_smc(data),
                 "dayHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"]),
+                "historicalFVGWinRate": self._calc_smc_backtest(daily_data) if daily_data else None
             }
             
         elif mode == "short_swing":
@@ -454,7 +539,8 @@ class TechnicalAPIClient(StockbitClient):
                 "SMC_Structural_H1": self._calc_smc(h1_data) if h1_data else None,
                 "SMC_Edge_M15": self._calc_smc(data),
                 "swingHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"]),
+                "historicalFVGWinRate": self._calc_smc_backtest(daily_data) if daily_data else None
             }
             
         elif mode == "swing":
@@ -484,7 +570,8 @@ class TechnicalAPIClient(StockbitClient):
                 "SMC_Structural_D1": self._calc_smc(data),
                 "SMC_Edge_H4": self._calc_smc(h4_data) if h4_data else None,
                 "swingHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"]),
+                "historicalFVGWinRate": self._calc_smc_backtest(daily_data) if daily_data else None
             }
             
         elif mode == "longterm":
@@ -511,7 +598,8 @@ class TechnicalAPIClient(StockbitClient):
                 "SMC_Structural_W1": self._calc_smc(weekly_data) if weekly_data else None,
                 "SMC_Edge_D1": self._calc_smc(data),
                 "yearHighLow": hl,
-                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"])
+                "fibonacci": self._calc_fibonacci(hl["high"], hl["low"]),
+                "historicalFVGWinRate": self._calc_smc_backtest(daily_data) if daily_data else None
             }
         else:
             raise ValueError("Invalid mode. Use 'intraday', 'short_swing', 'swing', or 'longterm'.")
