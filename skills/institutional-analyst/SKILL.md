@@ -163,8 +163,20 @@ Look for hidden buyers (large offer but price rising) and absorption (large bid 
 ## PART 6 — TRADING SCENARIO
 Generate Bull Case, Base Case, and Bear Case with specific breakouts, targets, and invalidation levels.
 
+* **Formulate Scenario & Invalidations:**
+  - Always define exact levels (Support, VWAP, FVG).
+  - Define invalidation levels. "If price drops below X (which is the bottom of the Daily FVG), this bullish thesis is invalidated."
+
+* **Volume Profile (VRVP) / Point of Control:**
+  - Always map the price relative to the `volumeProfilePOC` provided by Technical Analyst. The POC is the ultimate magnet/support level. If the price is above POC, the structure is heavily defended by institutions.
+
 ## PART 7 — RISK MANAGEMENT
-Provide Entry Zone, Stop Loss (based on structure/smart money avg), and Risk Rewa# FINAL OUTPUT FORMAT
+* **Stop Loss & Volatility (ATR):**
+  - DO NOT set Stop Loss exactly at the Swing Low or FVG edge. Use the `atr14` value from the Technical Analyst to avoid liquidity sweeps.
+  - Example: Bullish SL = `Swing Low - (1.5 * atr14)`. Bearish SL = `Swing High + (1.5 * atr14)`.
+* Provide Entry Zone, Stop Loss (based on ATR and structure), and Risk Reward Ratio.
+
+# FINAL OUTPUT FORMAT
 **CRITICAL RULE ON LANGUAGE:** The template below uses English as the default structural language. However, you MUST dynamically translate the entire output into the user's requested language (e.g., if the user asks in Indonesian, provide the report in Indonesian). The *structure* and *data points* must remain identical.
 
 Always return your analysis in this exact markdown format, using code blocks for structured data and GitHub-style alerts (`> [!WARNING]`, `> [!IMPORTANT]`) for emphasis.
