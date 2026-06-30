@@ -1,6 +1,6 @@
 # User Guide: TradingSquad AI Skills
 
-TradingSquad utilizes a powerful **Multi-Agent Collaborative Architecture**. The `institutional-analyst` and `technical-analyst` are designed to talk to each other, delegate workloads, and synthesize data just like a real proprietary trading desk.
+TradingSquad utilizes a powerful **Multi-Agent Collaborative Architecture**. The **`institutional-analyst` (The Brain/Orchestrator)** and **`technical-analyst` (The Sniper)** are designed to talk to each other, delegate workloads, and synthesize data just like a real proprietary trading desk. The **`fundamental-analyst` (The Valuator)** and **`sentiment-analyst` (The Narrative Checker)** provide vital valuation and news confirmation, while the **`market-scanner` (The Radar)** tracks macro flow.
 
 ---
 
@@ -14,13 +14,14 @@ Start your CLI inside the project directory and simply ask the lead analyst:
 > *"Act as the Institutional Analyst. Analyze the BBCA ticker. Determine the Wyckoff phase based on order flow, and grab the Quant Score from the technical analyst."*
 
 ### What Happens Under The Hood?
-1. The **`institutional-analyst`** reads your prompt and sees it requires OHLCV metrics, Quant Scores, and Fundamental data.
-2. It **delegates** the charting task by invoking the **`technical-analyst`** and the valuation task by invoking the **`fundamental-analyst`**.
+1. The **`institutional-analyst`** reads your prompt and sees it requires OHLCV metrics, Quant Scores, Fundamental data, and news validation.
+2. It **delegates** tasks using the `invoke_subagent` tool: Technical charting to **`technical-analyst`**, valuation to **`fundamental-analyst`**, and news/catalysts to **`sentiment-analyst`**.
 3. The `technical-analyst` runs `technical-api.js` to fetch Intraday/Daily candlestick data and groups the data into technical buckets (e.g., MA20 crossing MA50, RSI values).
-4. The `fundamental-analyst` runs `fundamental-api.js` to fetch KeyStats (PBV, PE) and calculates a Valuation Score.
-5. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers using a **Multi-Timeframe approach** (e.g., comparing Intraday vs 1-Month) strictly adhering to the **Rule of 5** (only Top 5 brokers are fetched to optimize LLM attention).
-6. The Agent synthesizes the data to find **SMC Sniper Confluence** (e.g., matching a Bullish FVG detected by the technical agent with massive accumulation by the Top 1 Broker).
-7. The final output is delivered as a structured Probability Report with an exact Entry Zone and Invalidation Stop Loss.
+4. The `fundamental-analyst` runs `fundamental-api.js` to fetch KeyStats (PBV, PE) and calculates the exact **Intrinsic Value (Nilai Wajar)** and **Margin of Safety**.
+5. The `sentiment-analyst` parses macro news and insider trading flows to check if the retail crowd is being trapped by orchestrated hype.
+6. Simultaneously, the `institutional-analyst` runs `institutional-api.js` to fetch Orderbook balance, Foreign Flow, and Top Brokers using a **Multi-Timeframe approach** (e.g., comparing Intraday vs 1-Month) strictly adhering to the **Rule of 5**.
+7. The Agent synthesizes the data to find **SMC Sniper Confluence** (e.g., matching a Bullish FVG detected by the technical agent with massive accumulation by the Top 1 Broker and positive Fair Value).
+8. The final output is delivered as a structured Probability Report with an exact Entry Zone and Invalidation Stop Loss.
 
 ---
 
@@ -53,6 +54,10 @@ Instead, ask the agent to run the **Live Draggers** scan:
 You can also ask the scanner to find which stocks foreigners are accumulating heavily across the entire exchange:
 > *"Act as the Market Scanner. Find the Top Net Foreign Buy and Sell for the entire IHSG today."*
 The scanner will utilize `getMarketMover` or `getTopStock` to fetch exactly where the offshore money is flowing.
+
+### Deep Dive: Symbol Detector & Live Tape
+If you want to zoom in on a specific ticker's accumulation status or read its real-time order flow speed, you can ask the scanner:
+> *"Act as the Market Scanner. Run the detector for CUAN to check the Bandar Accumulation status, then open the live tape for CUAN and BREN."*
 
 ---
 

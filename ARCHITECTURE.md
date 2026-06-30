@@ -6,10 +6,14 @@ This document outlines the core architecture and design decisions behind the Tra
 
 TradingSquad adopts a **Master Orchestrator** pattern rather than isolated standalone bots. 
 
-- **The Orchestrator (`institutional-analyst`)**: Acts as the central nervous system. It handles tape reading and broker flow logic natively but lacks charting and financial statement capabilities.
-- **The Workers (`technical-analyst`, `fundamental-analyst`, `sentiment-analyst`)**: Autonomous sub-agents specialized in executing exact mathematical, fundamental, and NLP tasks.
+- **The Brain/Orchestrator (`institutional-analyst`)**: Acts as the central nervous system. It handles tape reading and broker flow logic natively but lacks charting, financial statement, and news capabilities.
+- **The Sub-Agents (The Squad)**: 
+  - **`technical-analyst` (The Sniper)**: Autonomous sub-agent specialized in executing exact mathematical SMC and geometrical charting.
+  - **`fundamental-analyst` (The Valuator)**: Specialized in calculating exact **Intrinsic Value (Nilai Wajar)** and **Margin of Safety** from complex financial ratios.
+  - **`sentiment-analyst` (The Narrative Checker)**: Parses global macro events, corporate actions, and insider flows to validate if a catalyst is genuine or manipulative noise.
+  - **`market-scanner` (The Radar)**: Specialized in market-wide flow, real-time Symbol Detection, and tick-by-tick Live Tape reading.
 
-When the user queries the `institutional-analyst`, it explicitly delegates the fetching and mathematical modeling of price action to the `technical-analyst`. This prevents the main agent's LLM context from being bloated with raw OHLCV arrays, saving tokens and vastly improving reasoning accuracy.
+When the user queries the `institutional-analyst`, it explicitly delegates the heavy lifting using the `invoke_subagent` tool. This prevents the main agent's LLM context from being bloated with raw arrays (OHLCV, KeyStats, News feeds), saving tokens and vastly improving reasoning accuracy.
 
 ## 2. Hybrid Confluence Engine (SMC + Broker Flow)
 
@@ -39,7 +43,10 @@ To prevent LLM hallucination and "Dilution of Attention", the Bandarmology scrip
 
 - **RSI Calculation**: Built using Wilder's Smoothing (RMA) rather than simple moving averages (SMA). The engine dynamically warms up data using the first 14 periods as an SMA baseline, then shifts to RMA, ensuring 1-to-1 parity with TradingView.
 - **Intraday Windowing**: To prevent lagging EOD anomalies, Intraday mode forces VWAP and High/Low arrays to strictly slice data from `09:00 WIB` onwards. However, momentum indicators (MA, RSI) bypass this slice and fetch multi-day historical data to prevent curve breakage at the market open.
-- **Live Draggers**: Bypasses the exchange's EOD delay by monitoring 16 Free-Float Big Cap stocks minute-by-minute to calculate live index weights.
+- **Real-Time Data Bypassing**: Stockbit official endpoints for Foreign Flow are delayed EOD. To bypass this, the architecture employs:
+  - **Live Draggers**: Monitors 16 Free-Float Big Cap stocks minute-by-minute to calculate live index weights.
+  - **Live Tape Reading (`running-trade`)**: Tracks tick-by-tick executions of multiple symbols simultaneously to catch FOMO/Panic velocity.
+  - **Symbol Detector (`market-detector`)**: Dives deep into a specific ticker's *real-time* Bandar Accumulation and Broker Summary without waiting for EOD closure.
 
 ## 5. Dual-Language Execution Environment
 

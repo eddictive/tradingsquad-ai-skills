@@ -9,11 +9,12 @@ By equipping your AI agents with these skills, you enable them to perform high-l
 - **Multi-Agent Collaboration**: Skills autonomously delegate tasks to each other. For example, the `institutional-analyst` seamlessly queries the `technical-analyst` and `fundamental-analyst` to build a unified **Quant Score 2.0**.
 - **Dual Language Runtimes**: Every API workflow is natively written in **Python** (via `requests`) and **JavaScript** (via native `fetch`), supporting Node.js and Bun environments with zero npm dependencies.
 - **Shared Core Authentication**: A centralized `core/` module handles all Stockbit API logins, `XSRF-TOKEN` tracking, and secure `.stockbit_token.json` caching globally across all agents.
-- **Institutional Analyst**: Performs Wyckoff market structure evaluation, tape reading, order book intelligence, and **Multi-Timeframe Bandarmology** (comparing Intraday vs 1-Month broker flow to detect cornering and shakeouts). Employs the **Rule of 5** to filter retail noise and maintain optimal LLM signal-to-noise ratios.
-- **Hybrid Confluence Engine**: The `institutional-analyst` acts as the Master Orchestrator, automatically requesting **Smart Money Concepts (SMC)** data from the technical side (Unmitigated FVGs, BoS/CHoCH structure) and aligning it with Top Broker Accumulation to identify high-probability **Sniper Entries**.
-- **Market Scanner**: Scans the market for accumulation/rebound patterns and tracks **Top Foreign Flow**. Features the powerful **Live Intraday Draggers** (`livedraggers`) engine which bypasses End-of-Day API delays by tracking real-time price shifts of 16 specific Free-Float Big Caps (Lifters & Draggers).
-- **Technical Analyst**: Processes raw OHLCV data using a **Hybrid Windowing** approach. Calculates industry-standard indicators (RSI with RMA smoothing matching TradingView, MACD, Bollinger Bands) and scans for geometrical **SMC Fractals** (Swing Highs/Lows) while strictly isolating current-day data (09:00 - 16:00 WIB) for accurate daily VWAP.
-- **Fundamental Analyst**: Fetches Stockbit KeyStats & Financial Reports to calculate a concrete **Valuation Score** (PBV, PE, Yield) for detecting deep value setups vs value traps.
+- **Institutional Analyst (The Brain/Orchestrator)**: Performs Wyckoff market structure evaluation, tape reading, order book intelligence, and **Multi-Timeframe Bandarmology** (comparing Intraday vs 1-Month broker flow to detect cornering and shakeouts). Employs the **Rule of 5** to filter retail noise and maintain optimal LLM signal-to-noise ratios. Acts as the Master Orchestrator, automatically delegating tasks to sub-agents.
+- **Hybrid Confluence Engine**: The `institutional-analyst` requests **Smart Money Concepts (SMC)** data from the technical side (Unmitigated FVGs, BoS/CHoCH structure) and aligns it with Top Broker Accumulation to identify high-probability **Sniper Entries**.
+- **Market Scanner (The Radar)**: Scans the market for accumulation/rebound patterns and tracks **Top Foreign Flow**. Features the **Symbol Detector & Live Tape** for deep dive accumulation analysis and real-time order flow tracking, as well as the **Live Intraday Draggers** (`livedraggers`) engine to bypass End-of-Day API delays.
+- **Technical Analyst (The Sniper)**: Processes raw OHLCV data using a **Hybrid Windowing** approach. Calculates industry-standard indicators (RSI with RMA smoothing matching TradingView, MACD, Bollinger Bands) and scans for geometrical **SMC Fractals** (Swing Highs/Lows) while strictly isolating current-day data (09:00 - 16:00 WIB) for accurate daily VWAP.
+- **Fundamental Analyst (The Valuator)**: Fetches Stockbit KeyStats & Financial Reports to calculate a concrete **Valuation Score** and determine the exact **Intrinsic Value (Nilai Wajar)** and **Margin of Safety** for detecting deep value setups vs value traps.
+- **Sentiment Analyst (The Narrative Checker)**: Scans macro-economic global news, corporate actions, insider trading, and retail sentiment to identify genuine catalysts versus institutional manipulative noise (shakeouts or FOMO traps).
 
 ## 📂 Project Structure
 
@@ -33,8 +34,9 @@ tradingsquad-ai-skills/
     ├── market-scanner/       # Real-time intraday draggers & lifters
     │   ├── SKILL.md
     │   └── scripts/
-    │       ├── institutional-api.py 
-    │       └── institutional-api.js 
+    │       ├── scanner-api.py 
+    │       └── scanner-api.js 
+    ├── sentiment-analyst/    # Macro news & insider flow
     └── technical-analyst/    
         ├── SKILL.md
         └── scripts/
