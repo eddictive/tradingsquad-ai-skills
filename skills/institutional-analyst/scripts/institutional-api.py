@@ -36,12 +36,18 @@ class InstitutionalAPIClient(StockbitClient):
         }
         params.update(kwargs)
         return self._get_exodus(f"/marketdetectors/{ticker}", params=params).get("data", {})
-
-    def get_financial_data(self, ticker, year_limit=5):
-        """Retrieve revenue growth, EPS, ROE, debt ratio, and valuation."""
-        params = {"year_limit": year_limit}
-        return self._get_exodus(f"/keystats/ratio/v1/{ticker}", params=params).get("data", {})
-
+    def get_broker_distribution(self, ticker, **kwargs):
+        """Analyze who sold to whom and detect cornering/absorption."""
+        params = {
+            "symbol": ticker,
+            "investor_type": "INVESTOR_TYPE_ALL",
+            "market_board": "MARKET_TYPE_REGULER",
+            "data_type": "BROKER_DISTRIBUTION_DATA_TYPE_VALUE",
+            "period": "TB_PERIOD_LAST_1_DAY",
+            "date": ""
+        }
+        params.update(kwargs)
+        return self._get_exodus("/order-trade/broker/distribution", params=params).get("data", {})
 if __name__ == "__main__":
     api = InstitutionalAPIClient()
     api.login()

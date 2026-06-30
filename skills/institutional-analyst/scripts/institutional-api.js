@@ -30,9 +30,17 @@ class InstitutionalAPIClient extends StockbitClient {
     return data.data || {};
   }
 
-  async getFinancialData(ticker, yearLimit = 5) {
-    const params = { year_limit: yearLimit };
-    const data = await this._getExodus(`/keystats/ratio/v1/${ticker}`, params);
+  async getBrokerDistribution(ticker, options = {}) {
+    const params = {
+      symbol: ticker,
+      investor_type: "INVESTOR_TYPE_ALL",
+      market_board: "MARKET_TYPE_REGULER",
+      data_type: "BROKER_DISTRIBUTION_DATA_TYPE_VALUE",
+      period: "TB_PERIOD_LAST_1_DAY",
+      date: "",
+      ...options
+    };
+    const data = await this._getExodus(`/order-trade/broker/distribution`, params);
     return data.data || {};
   }
 }
