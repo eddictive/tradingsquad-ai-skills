@@ -26,22 +26,43 @@ class FundamentalAPIClient(StockbitClient):
         return res.get("data", {})
 
 if __name__ == "__main__":
+    import json
     api = FundamentalAPIClient()
     try:
         api.login()
-        data = api.get_keystats("BBCA", 10)
-        pbv = None
-        pe = None
         
-        for group in data.get("closure_fin_items_results", []):
-            for item in group.get("fin_name_results", []):
-                name = item.get("fitem", {}).get("name", "")
-                val = item.get("fitem", {}).get("value", "")
-                if "Price to Book" in name:
-                    pbv = val
-                if "Current PE Ratio (TTM)" in name:
-                    pe = val
+        action = sys.argv[1] if len(sys.argv) > 1 else "keystats"
+        ticker = sys.argv[2] if len(sys.argv) > 2 else "BBCA"
+        
+        if action == "keystats":
+            data = api.get_keystats(ticker, 10)
+            results = {}
+            
+            for group in data.get("closure_fin_items_results", []):
+                for item in group.get("fin_name_results", []):
+                    name = item.get("fitem", {}).get("name", "")
+                    val = item.get("fitem", {}).get("value", "")
                     
-        print(f"Fundamental Data Example (BBCA): PBV = {pbv}, PE = {pe}")
+                    if "Current PE Ratio (TTM)" in name: results["PE_Ratio_TTM"] = val
+                    if "Price to Book" in name: results["PBV"] = val
+                    if "Return on Equity (TTM)" in name: results["ROE_TTM"] = val
+                    if "Net Profit Margin (Quarter)" in name: results["NPM_Quarter"] = val
+                    if "Debt to Equity Ratio (Quarter)" in name: results["DER_Quarter"] = val
+                    if "Current Ratio (Quarter)" in name: results["Current_Ratio_Quarter"] = val
+                    if "Free cash flow (TTM)" in name: results["FCF_TTM"] = val
+                    if "Dividend Yield" in name: results["Dividend_Yield"] = val
+                    if "EV to EBITDA (TTM)" in name: results["EV_to_EBITDA"] = val
+                    if "Current Price To Free Cashflow" in name: results["Price_to_FCF"] = val
+                        
+            print(f"KeyStats [{ticker}]:\n{json.dumps(results, indent=2)}")
+            
+        elif action == "report":
+            report_type = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+            statement_type = int(sys.argv[4]) if len(sys.argv) > 4 else 2
+            data = api.get_financial_report(ticker, report_type, statement_type)
+            if "report" in data and len(data["report"]) > 5:
+                data["report"] = data["report"][:5]
+            print(f"Financial Report [{ticker}]:\n{json.dumps(data, indent=2)}")
+            
     except Exception as e:
         print(f"Error: {e}")

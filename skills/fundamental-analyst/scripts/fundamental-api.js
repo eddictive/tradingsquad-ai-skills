@@ -27,21 +27,43 @@ if (require.main === module) {
     const api = new FundamentalAPIClient();
     try {
       await api.login();
-      const data = await api.getKeyStats("BBCA", 10);
-      // Example of extracting PBV and PE
-      let pbv = null;
-      let pe = null;
       
-      if (data.closure_fin_items_results) {
-         data.closure_fin_items_results.forEach(group => {
-            group.fin_name_results.forEach(item => {
-               if (item.fitem.name.includes("Price to Book")) pbv = item.fitem.value;
-               if (item.fitem.name.includes("Current PE Ratio (TTM)")) pe = item.fitem.value;
-            });
-         });
+      const action = process.argv[2] || "keystats";
+      const ticker = process.argv[3] || "BBCA";
+      
+      if (action === "keystats") {
+        const data = await api.getKeyStats(ticker, 10);
+        
+        let results = {};
+        if (data.closure_fin_items_results) {
+           data.closure_fin_items_results.forEach(group => {
+              group.fin_name_results.forEach(item => {
+                 const name = item.fitem.name;
+                 const val = item.fitem.value;
+                 // Extract essential LLM data
+                 if (name.includes("Current PE Ratio (TTM)")) results["PE_Ratio_TTM"] = val;
+                 if (name.includes("Price to Book")) results["PBV"] = val;
+                 if (name.includes("Return on Equity (TTM)")) results["ROE_TTM"] = val;
+                 if (name.includes("Net Profit Margin (Quarter)")) results["NPM_Quarter"] = val;
+                 if (name.includes("Debt to Equity Ratio (Quarter)")) results["DER_Quarter"] = val;
+                 if (name.includes("Current Ratio (Quarter)")) results["Current_Ratio_Quarter"] = val;
+                 if (name.includes("Free cash flow (TTM)")) results["FCF_TTM"] = val;
+                 if (name.includes("Dividend Yield")) results["Dividend_Yield"] = val;
+                 if (name.includes("EV to EBITDA (TTM)")) results["EV_to_EBITDA"] = val;
+                 if (name.includes("Current Price To Free Cashflow")) results["Price_to_FCF"] = val;
+              });
+           });
+        }
+        
+        console.log(`KeyStats [${ticker}]:`, JSON.stringify(results, null, 2));
+      } else if (action === "report") {
+        const reportType = parseInt(process.argv[4] || "1", 10);
+        const statementType = parseInt(process.argv[5] || "2", 10);
+        const data = await api.getFinancialReport(ticker, reportType, statementType);
+        // Truncate deeply nested stuff for CLI
+        if(data.report && data.report.length > 5) data.report = data.report.slice(0, 5); 
+        console.log(`Financial Report [${ticker}]:`, JSON.stringify(data, null, 2));
       }
-      
-      console.log(`Fundamental Data Example (BBCA): PBV = ${pbv}, PE = ${pe}`);
     } catch (e) {
       console.error(e.message);
     }
