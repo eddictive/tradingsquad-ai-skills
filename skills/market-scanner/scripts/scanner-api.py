@@ -112,7 +112,7 @@ class ScannerAPIClient(StockbitClient):
         results = []
         
         end_ts = int(time.time())
-        start_ts = end_ts - (24 * 60 * 60)
+        start_ts = end_ts - (5 * 24 * 60 * 60) # 5 days to handle weekends
         
         # WIB is UTC+7
         wib_tz = timezone(timedelta(hours=7))
@@ -131,15 +131,20 @@ class ScannerAPIClient(StockbitClient):
                 candles = raw_data.get("data", {}).get("chartbit", [])
                 
                 today_candles = [c for c in candles if c.get("datetime", "").startswith(today_str)]
+                prev_candles = [c for c in candles if not c.get("datetime", "").startswith(today_str)]
                 
-                if today_candles:
+                if today_candles and prev_candles:
                     today_candles.sort(key=lambda x: x["unix_timestamp"])
+                    prev_candles.sort(key=lambda x: x["unix_timestamp"])
+                    
                     open_price = today_candles[0]["open"]
+                    prev_close = prev_candles[-1]["close"]
                     close_price = today_candles[-1]["close"]
-                    change = ((close_price - open_price) / open_price) * 100
+                    change = ((close_price - prev_close) / prev_close) * 100
                     results.append({
                         "ticker": ticker,
                         "open": open_price,
+                        "prevClose": prev_close,
                         "close": close_price,
                         "changePercent": f"{change:.2f}%"
                     })

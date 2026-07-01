@@ -124,7 +124,7 @@ class ScannerAPIClient extends StockbitClient {
     const giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO'];
     const results = [];
     const endTs = Math.floor(Date.now() / 1000);
-    const startTs = endTs - (24 * 60 * 60);
+    const startTs = endTs - (5 * 24 * 60 * 60); // 5 days to handle weekends
     
     // Konversi ke format string YYYY-MM-DD sesuai zona waktu lokal bursa (WIB)
     // Date.now() di server mungkin UTC, maka sesuaikan ke UTC+7 (25200 detik)
@@ -141,13 +141,17 @@ class ScannerAPIClient extends StockbitClient {
         });
         const candles = rawData?.data?.chartbit || [];
         const todayCandles = candles.filter(c => (c.datetime || '').startsWith(todayStr));
+        const prevCandles = candles.filter(c => !(c.datetime || '').startsWith(todayStr));
         
-        if (todayCandles.length > 0) {
+        if (todayCandles.length > 0 && prevCandles.length > 0) {
           todayCandles.sort((a,b) => a.unix_timestamp - b.unix_timestamp);
+          prevCandles.sort((a,b) => a.unix_timestamp - b.unix_timestamp);
+          
           const open = todayCandles[0].open;
+          const prevClose = prevCandles[prevCandles.length - 1].close;
           const close = todayCandles[todayCandles.length - 1].close;
-          const change = ((close - open) / open) * 100;
-          results.push({ ticker, open, close, changePercent: change.toFixed(2) + '%' });
+          const change = ((close - prevClose) / prevClose) * 100;
+          results.push({ ticker, open, prevClose, close, changePercent: change.toFixed(2) + '%' });
         }
       } catch (e) {}
     }
