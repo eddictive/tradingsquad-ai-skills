@@ -27,6 +27,30 @@
 
 8. **Use Provided Skill Scripts (No Custom Fetchers)**: Do NOT write, create, or execute custom fetching/scraping scripts (e.g. `fetch_adro.js` or `script.py`) to gather market data. You MUST strictly use the pre-built API scripts provided in the specific skill's script directory (e.g., `skills/[skill_name]/scripts/` or `.agents/skills/[skill_name]/scripts/`) by executing them via terminal one-liners (e.g. `node -e "..."` or `python3 ...`). Writing custom scripts wastes time, bypasses built-in authentication, and is strictly prohibited. The `.data/temp/` directory is exclusively for piping output data (e.g. `.json`), NOT for storing executable code.
 
+### Supported Trading Modes & Intent Mapping
+
+9. **Trading Mode Classification**: When a user requests an analysis, infer the trading timeframe based on their prompt and orchestrate your sub-agents (e.g., `technical-analyst`, `institutional-analyst`) accordingly.
+
+- **Intraday / Scalping (1-3 Days)**
+  - *Context*: Focuses on VWAP, 1H/15m timeframe, fast momentum, and live tape reading.
+  - *Example Prompts*: "Analisis ADRO untuk scalping hari ini", "Cek momentum BBCA buat day trade", "Apakah BREN kuat naik sampai penutupan sesi 2?"
+  - *Action*: Pass `intraday` to technical-api. Fetch 1-day or 5-day broker summary.
+
+- **Short Swing (1-3 Weeks)**
+  - *Context*: Focuses on Daily (1D) chart, MA10/MA20, and short-term accumulation.
+  - *Example Prompts*: "Analisis swing pendek TINS", "Gimana prospek BUMI buat 2 minggu ke depan?", "Cek bandarmologi GOTO bulan ini."
+  - *Action*: Pass `swing` to technical-api. Fetch 1-week or 1-month broker summary.
+
+- **Swing / Medium Term (1-3 Months)**
+  - *Context*: Focuses on Daily/Weekly (1W) chart, MA50, and 3-month Fibonacci.
+  - *Example Prompts*: "Analisis swing medium term AMMN", "Proyeksi harga BRPT 3 bulan ke depan", "Apakah aman hold ASII sampai kuartal depan?"
+  - *Action*: Pass `swing` to technical-api. Fetch 1-month or 3-month broker summary.
+
+- **Long Term / Investing (6 Months - Years)**
+  - *Context*: Focuses on Weekly/Monthly chart, MA200, fundamental fair value, and macro trends.
+  - *Example Prompts*: "Analisis long term BBRI buat nabung saham", "Fundamental check INDF untuk hold 2 tahun", "Proyeksi profitabilitas PTBA FY 2026."
+  - *Action*: Pass `longterm` to technical-api. Fetch 3-month or 6-month broker summary. Delegate heavily to `fundamental-analyst`.
+
 
 ---
 
