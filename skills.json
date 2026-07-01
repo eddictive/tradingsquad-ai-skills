@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "TradingSquad AI skill manifest for installer and agent auto-discovery",
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "entries": [
     {

@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-07-02
+
+### Added
+- `core/orderbook-format.js` / `orderbook_format.py` — normalize Stockbit orderbook to 10-level BID/OFFER boards with lots and ratio
+- `tests/orderbook-format.test.js`
+
+### Changed
+- `institutional-api orderbook` returns formatted `bid[]` / `offer[]` (10 levels each, BEI/Stockbit depth)
+- `institutional-analyst` SKILL.md §5 Order Book Intelligence — require all 10 levels (Rule of 5 exception)
+- `ARCHITECTURE.md` — document orderbook as Rule-of-5 exception
+
 ## [1.0.2] - 2026-07-01
 
 ### Added
@@ -59,6 +70,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `.stockbit_token.json` excluded from npm package and git
 - Installer warns when BYOT token file is present (never overwritten)
 
+[1.0.3]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.3
 [1.0.2]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.2
 [1.0.1]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.1
 [1.0.0]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.0

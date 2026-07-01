@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../core'))
 from stockbit_auth import StockbitClient
 from rule_of_five import RULE_OF_FIVE, clamp_limit
+from orderbook_format import format_orderbook
 
 class InstitutionalAPIClient(StockbitClient):
     """
@@ -13,8 +14,9 @@ class InstitutionalAPIClient(StockbitClient):
     Handles Orderbook, Broker Summary, and Foreign Flow logic.
     """
     def get_orderbook(self, ticker):
-        """Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength."""
-        return self._get_exodus(f"/orderbook/companies/{ticker}").get("data", {})
+        """Retrieve 10-level BID/OFFER board (BEI/Stockbit depth) with lots and ratio."""
+        raw = self._get_exodus(f"/orderbook/companies/{ticker}").get("data", {})
+        return format_orderbook(raw)
 
     def get_broker_summary(self, ticker, limit=RULE_OF_FIVE, **kwargs):
         """Analyze top buyer/seller brokers, average accumulation price, net accumulation."""
@@ -52,7 +54,7 @@ class InstitutionalAPIClient(StockbitClient):
 CLI_COMMANDS = [
     {"usage": "broker <TICKER> [PERIOD]", "detail": "Broker summary (Rule of 5). PERIOD e.g. BROKER_SUMMARY_PERIOD_LAST_1_MONTH"},
     {"usage": "foreign <TICKER> [PERIOD]", "detail": "Foreign flow summary (Rule of 5)"},
-    {"usage": "orderbook <TICKER>", "detail": "Live orderbook bid/ask"},
+    {"usage": "orderbook <TICKER>", "detail": "Live orderbook — 10 BID + 10 OFFER levels (BEI/Stockbit depth)"},
     {"usage": "distribution <TICKER>", "detail": "Broker distribution network (who sold to whom)"},
 ]
 

@@ -145,8 +145,12 @@ For institutional data, utilize either `institutional-api.py` or `institutional-
 
 ## get_orderbook()
 Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength.
-**CRITICAL RULE FOR ORDERBOOK VOLUME:** The raw volume numbers returned by the API are in **Shares (Lembar)**, NOT Lots. Since 1 Lot = 100 Shares in the IDX, you MUST mathematically divide the raw volume data by 100 before formatting it as "Lot" in your output (e.g. `3163300` raw volume = `31633` lots = `31.6 Ribu Lot`). Do NOT blindly append "Juta Lot" to the raw number.
-Calculate Bid Ask Ratio = Total Bid Lot / Total Offer Lot.
+
+**ORDERBOOK DEPTH — 10 levels (Rule of 5 exception):** BEI / Stockbit app shows **10 price levels** per BID board and **10** per OFFER board. `institutional-api orderbook` returns normalized `bid[]` and `offer[]` arrays (up to 10 rows each) plus `totals.bidOfferRatio`. **ALWAYS list all 10 levels** for each side in §5 Order Book Intelligence. Rule of 5 applies to **broker summary only**, not orderbook.
+
+**Volume units:** CLI output uses `volumeLots` (shares ÷ 100). Use `volumeLots` and `queueCount` from each row. Format large lots readably (e.g. `110.542 Lot`, `31,6 Ribu Lot`). Do NOT use raw `volumeShares` as lots.
+
+**Bid/Ask ratio:** Use `totals.bidOfferRatio` (= total bid lots ÷ total offer lots), or recompute from listed levels.
 Interpretation:
 > 2: Strong buyer pressure
 1-2: Neutral bullish
@@ -343,22 +347,40 @@ Smart Money Score: 0-100
 
 ## 5. Order Book Intelligence
 ```
-=== ORDERBOOK SNAPSHOT ===
+=== ORDERBOOK SNAPSHOT — [Date] ===
 
-BID (Demand):
-  [List top/massive bids]
-  TOTAL BID ~
+BID (Demand) — 10 levels (best bid first):
+  Rp [price1] : ~[volumeLots1] Lot ([queueCount1] antrian) [optional: tembok besar]
+  Rp [price2] : ~[volumeLots2] Lot
+  Rp [price3] : ~[volumeLots3] Lot
+  Rp [price4] : ~[volumeLots4] Lot
+  Rp [price5] : ~[volumeLots5] Lot
+  Rp [price6] : ~[volumeLots6] Lot
+  Rp [price7] : ~[volumeLots7] Lot
+  Rp [price8] : ~[volumeLots8] Lot
+  Rp [price9] : ~[volumeLots9] Lot
+  Rp [price10]: ~[volumeLots10] Lot
+  TOTAL BID ~[totals.bidLots] Lot
 
-OFFER (Supply):
-  [List top/massive offers]
-  TOTAL OFFER ~
+OFFER (Supply) — 10 levels (best offer first):
+  Rp [price1] : ~[volumeLots1] Lot
+  Rp [price2] : ~[volumeLots2] Lot
+  Rp [price3] : ~[volumeLots3] Lot
+  Rp [price4] : ~[volumeLots4] Lot
+  Rp [price5] : ~[volumeLots5] Lot
+  Rp [price6] : ~[volumeLots6] Lot
+  Rp [price7] : ~[volumeLots7] Lot
+  Rp [price8] : ~[volumeLots8] Lot
+  Rp [price9] : ~[volumeLots9] Lot
+  Rp [price10]: ~[volumeLots10] Lot
+  TOTAL OFFER ~[totals.offerLots] Lot
 
 BID/ASK RATIO:
-  Bid/Offer Ratio: 
+  Bid/Offer Ratio: [totals.bidOfferRatio] : 1
 
 INTERPRETATION:
-  → 
-  → 
+  → [Bid/offer dominance, walls, absorption]
+  → [Hidden buyer/seller or queue imbalance if visible]
 ```
 
 ---

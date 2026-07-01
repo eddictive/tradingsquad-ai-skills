@@ -1,10 +1,11 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
 const { RULE_OF_FIVE, clampLimit } = require('../../../core/rule-of-five.js');
+const { formatOrderbook } = require('../../../core/orderbook-format.js');
 
 class InstitutionalAPIClient extends StockbitClient {
   async getOrderbook(ticker) {
     const data = await this._getExodus(`/orderbook/companies/${ticker}`);
-    return data.data || {};
+    return formatOrderbook(data.data || {});
   }
 
   async getBrokerSummary(ticker, limit = RULE_OF_FIVE, options = {}) {
@@ -49,7 +50,7 @@ class InstitutionalAPIClient extends StockbitClient {
 const CLI_COMMANDS = [
   { usage: 'broker <TICKER> [PERIOD]', detail: 'Broker summary (Rule of 5). PERIOD e.g. BROKER_SUMMARY_PERIOD_LAST_1_MONTH' },
   { usage: 'foreign <TICKER> [PERIOD]', detail: 'Foreign flow summary (Rule of 5)' },
-  { usage: 'orderbook <TICKER>', detail: 'Live orderbook bid/ask' },
+  { usage: 'orderbook <TICKER>', detail: 'Live orderbook — 10 BID + 10 OFFER levels (BEI/Stockbit depth)' },
   { usage: 'distribution <TICKER>', detail: 'Broker distribution network (who sold to whom)' },
 ];
 
