@@ -19,8 +19,10 @@ FEEDS = {
     "Bloomberg Politics": "https://feeds.bloomberg.com/politics/news.rss",
     "WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
     "Yahoo Finance": "https://finance.yahoo.com/news/rssindex",
+    "Investing Economics": "https://www.investing.com/rss/news_95.rss",
     "CNBC US": "https://search.cnbc.com/rs/search/combinedcms/view.xml?profile=120000000&id=10000664",
     "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss",
+    "Stockbit Snips": "https://snips.stockbit.com/snips-terbaru?format=rss",
     "IDX Channel": "https://sindikasi.idxchannel.com/rss",
     "IDX Channel Market News": "https://sindikasi.idxchannel.com/rss/market-news",
     "IDX Channel ESG Zone": "https://rss.app/feeds/RlLjCUWQKH7f9zOb.xml",
@@ -81,9 +83,9 @@ def main():
     if action == "all":
         targets = FEEDS.keys()
     elif action == "local":
-        targets = ["CNBC Indonesia", "IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"]
+        targets = ["CNBC Indonesia", "Stockbit Snips","IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"]
     elif action == "global":
-        targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US", "Trading Economics"]
+        targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "Investing Economics", "CNBC US", "Trading Economics"]
     else:
         # If user passed a specific feed name
         targets = [k for k in FEEDS.keys() if action.lower() in k.lower()]

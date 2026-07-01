@@ -14,8 +14,10 @@ const FEEDS = {
   "Bloomberg Politics": "https://feeds.bloomberg.com/politics/news.rss",
   "WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
   "Yahoo Finance": "https://finance.yahoo.com/news/rssindex",
+  "Investing Economics": "https://www.investing.com/rss/news_95.rss",
   "CNBC US": "https://search.cnbc.com/rs/search/combinedcms/view.xml?profile=120000000&id=10000664",
   "CNBC Indonesia": "https://www.cnbcindonesia.com/market/rss",
+  "Stockbit Snips": "https://snips.stockbit.com/snips-terbaru?format=rss",
   "IDX Channel": "https://sindikasi.idxchannel.com/rss",
   "IDX Channel Market News": "https://sindikasi.idxchannel.com/rss/market-news",
   "IDX Channel ESG Zone": "https://rss.app/feeds/RlLjCUWQKH7f9zOb.xml",
@@ -102,9 +104,9 @@ async function main() {
   if (action === "all") {
     targets = Object.keys(FEEDS);
   } else if (action === "local") {
-    targets = ["CNBC Indonesia", "IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"];
+    targets = ["CNBC Indonesia", "Stockbit Snips","IDX Channel", "IDX Channel Market News", "IDX Channel ESG Zone", "Emitennews"];
   } else if (action === "global") {
-    targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "CNBC US", "Trading Economics"];
+    targets = ["Bloomberg Markets", "Bloomberg Economics", "WSJ Markets", "Yahoo Finance", "Investing Economics", "CNBC US", "Trading Economics"];
   } else {
     // If user passed a specific feed name subset
     targets = Object.keys(FEEDS).filter(k => k.toLowerCase().includes(action));
