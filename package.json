@@ -1,6 +1,6 @@
 {
   "name": "tradingsquad-ai-skills",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A collaborative multi-agent framework delivering institutional-grade trading intelligence for Indonesian equities (IDX).",
   "main": "scripts/install-skills.js",
   "bin": {

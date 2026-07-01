@@ -34,7 +34,11 @@ Apply **AGENTS.md Rule 5** for live vs swing/EOD when market is closed.
 | **Standalone** (`sentiment-api` only) | **Yes — once** after Gate 1: `node scripts/auth-check.js` |
 | **`macro-news` only** (RSS) | **No** — no Stockbit BYOT needed |
 
-Exit **1** → STOP; direct user to `docs/INSTALLATION.md`.
+### Auth failure — HARD STOP (exit 1)
+
+If Gate 2 exits **1**, or `sentiment-api` reports token/auth/refresh failure: **halt immediately**. Relay the `auth-check` banner to the user. Direct them to `docs/INSTALLATION.md`. (`macro-news` RSS-only path is unaffected.)
+
+**Forbidden:** run `sentiment-api`; web search/scraping substitutes; cached `.data/temp/` data; alternate auth paths; partial or synthetic sentiment reports.
 
 ---
 

@@ -49,7 +49,13 @@ node scripts/auth-check.js
 | **Standalone** | **Yes — once** after Gate 1 |
 | **[skill-specific exempt path]** | **No** — [reason, e.g. RSS-only] |
 
-Exit **1** → STOP; direct user to `docs/INSTALLATION.md`. Success writes `.data/temp/.auth-preflight.json` (30 min TTL).
+Success writes `.data/temp/.auth-preflight.json` (30 min TTL).
+
+### Auth failure — HARD STOP (exit 1)
+
+If Gate 2 exits **1**, or any `*-api` reports token/auth/refresh failure: **halt immediately**. Relay the `auth-check` banner. Direct user to `docs/INSTALLATION.md`.
+
+**Forbidden:** run `*-api` or sub-agents; web search/scraping substitutes; cached `.data/temp/` data; alternate auth paths; partial or synthetic reports.
 
 ---
 

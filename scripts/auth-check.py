@@ -7,32 +7,37 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "core")))
 from stockbit_auth import StockbitClient
 from auth_preflight import is_preflight_valid, write_preflight_stamp, PREFLIGHT_TTL_SEC
+from auth_failure import build_auth_failure_payload, print_auth_failure_banner, is_auth_related_error
 
 SETUP_HELP = (
-    "See docs/INSTALLATION.md — paste credentialStorage from Stockbit browser "
+    "docs/INSTALLATION.md — paste credentialStorage from Stockbit browser "
     "DevTools into .stockbit_token.json"
 )
+
+
+def emit_auth_failure(payload, json_out=False, quiet=False):
+    if not quiet:
+        if json_out:
+            print(json.dumps(payload, indent=2))
+        else:
+            print_auth_failure_banner(payload)
+    return {**payload, "exitCode": 1}
 
 
 def run_auth_check(json_out=False, quiet=False, verify_network=True, skip_if_valid=False):
     token_path = os.path.join(os.getcwd(), ".stockbit_token.json")
 
     if not os.path.exists(token_path):
-        payload = {
-            "ok": False,
-            "code": "TOKEN_MISSING",
-            "message": "No .stockbit_token.json in workspace.",
-            "tokenFile": token_path,
-            "help": SETUP_HELP,
-        }
-        if not quiet:
-            if json_out:
-                print(json.dumps(payload, indent=2))
-            else:
-                print("❌ STOCKBIT AUTH FAILED — token file missing", file=sys.stderr)
-                print(f"   Expected : {token_path}", file=sys.stderr)
-                print(f"   Fix      : {SETUP_HELP}", file=sys.stderr)
-        return {**payload, "exitCode": 1}
+        return emit_auth_failure(
+            build_auth_failure_payload(
+                "TOKEN_MISSING",
+                "No .stockbit_token.json in workspace.",
+                token_path,
+                SETUP_HELP,
+            ),
+            json_out=json_out,
+            quiet=quiet,
+        )
 
     if skip_if_valid and is_preflight_valid(token_path):
         cached = {
@@ -68,6 +73,17 @@ def run_auth_check(json_out=False, quiet=False, verify_network=True, skip_if_val
                 result["username"] = p.get("username") or result["username"]
                 result["networkVerified"] = True
             except Exception as e:
+                if is_auth_related_error(str(e)):
+                    return emit_auth_failure(
+                        build_auth_failure_payload(
+                            "TOKEN_INVALID",
+                            str(e),
+                            client.token_file,
+                            SETUP_HELP,
+                        ),
+                        json_out=json_out,
+                        quiet=quiet,
+                    )
                 result["networkVerified"] = False
                 result["networkWarning"] = str(e)
 
@@ -89,20 +105,16 @@ def run_auth_check(json_out=False, quiet=False, verify_network=True, skip_if_val
 
         return {**result, "exitCode": 0}
     except Exception as e:
-        payload = {
-            "ok": False,
-            "code": "TOKEN_INVALID",
-            "message": str(e),
-            "tokenFile": client.token_file,
-            "help": "Refresh credentialStorage from Stockbit and update .stockbit_token.json",
-        }
-        if not quiet:
-            if json_out:
-                print(json.dumps(payload, indent=2))
-            else:
-                print(f"❌ STOCKBIT AUTH FAILED: {e}", file=sys.stderr)
-                print(f"   Fix: {payload['help']}", file=sys.stderr)
-        return {**payload, "exitCode": 1}
+        return emit_auth_failure(
+            build_auth_failure_payload(
+                "TOKEN_INVALID",
+                str(e),
+                client.token_file,
+                SETUP_HELP,
+            ),
+            json_out=json_out,
+            quiet=quiet,
+        )
 
 
 def print_auth_check_help():

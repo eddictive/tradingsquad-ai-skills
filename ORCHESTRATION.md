@@ -38,6 +38,16 @@ node scripts/auth-check.js           # 1× per pipeline — NOT per sub-skill
 
 Successful `auth-check` writes `.data/temp/.auth-preflight.json` (30 min, invalidated if token file changes).
 
+### Auth failure — HARD STOP
+
+If `auth-check` exits **1** (missing token, expired access/refresh, refresh failed, or API 401/403):
+
+1. **Stop the pipeline** — do not run steps 3–8.
+2. **Relay the banner** printed by `auth-check` (starts with `⛔ PIPELINE HALTED`).
+3. **Tell the user** to paste a fresh `credentialStorage` value into `.stockbit_token.json` per `docs/INSTALLATION.md`.
+
+**Forbidden after auth failure:** web search or scraping for market data; cached `.data/temp/` files; alternate auth paths; custom fetchers; partial reports; sub-agent delegation.
+
 Mode mapping: see `core/trading-modes.json`.
 
 ---
@@ -150,7 +160,7 @@ All API scripts support `--help`.
 
 > Act as the Institutional Analyst. Analyze **BBCA** for **short swing** (1–3 weeks).
 > 1. Run `trading-day-check` (adapt for swing/EOD if market closed per AGENTS.md).
-> 2. Run `auth-check` — if exit 1, stop and ask user to fix `.stockbit_token.json`.
+> 2. Run `auth-check` — if exit 1, HARD STOP (no web search, cached data, or partial reports). Relay banner; user must refresh `.stockbit_token.json` per `docs/INSTALLATION.md`.
 > 3. Fetch technical analysis (`short_swing`), fundamental keystats, sentiment aggregate, and 1-month broker summary.
 > 4. Compute Master Quant Score via `quant-score.js` (4 engines: 20+20+20+40).
 > 5. Produce the full institutional report and save to `report/`.

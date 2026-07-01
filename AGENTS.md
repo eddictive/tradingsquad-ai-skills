@@ -24,7 +24,8 @@
    - **Who runs it:** `institutional-analyst` (or whichever skill **owns** the multi-agent pipeline). **Sub-agents must NOT** re-run `auth-check` — they proceed directly to their `*-api` CLI after orchestrator preflight passes.
    - **Standalone single skill:** that skill runs `auth-check` **once** before its own `*-api` scripts.
    - **Exit 0:** Proceed with all Stockbit `*-api` scripts in the pipeline.
-   - **Exit 1:** STOP the entire pipeline. Tell the user to fix `.stockbit_token.json` per `docs/INSTALLATION.md`.
+   - **Exit 1 — HARD STOP (non-negotiable):** Halt the **entire** pipeline immediately. Relay the `auth-check` banner to the user. Direct them to refresh `credentialStorage` into `.stockbit_token.json` per `docs/INSTALLATION.md`. **Do not** investigate alternate paths, retry with workarounds, or continue in any form.
+   - **Auth failure — zero fallback policy:** When `auth-check` exits 1 **or** any `*-api` script reports token/auth/refresh failure, you MUST stop. **Forbidden:** web search or scraping for market data; cached `.data/temp/` JSON; inventing/synthesizing prices or broker flow; alternate auth paths; custom fetchers; partial/"best effort" reports; delegating sub-agents; writing `report/` files.
    - Session stamp: successful check writes `.data/temp/.auth-preflight.json` (30 min TTL). Sub-agents may use `auth-check --skip-if-valid` only if unsure — prefer skipping entirely.
    - `quant-score.js` and `trading-day-check.js` do not require this gate (no Stockbit API calls).
 
@@ -41,7 +42,7 @@
 
 ### Built-in Skill Scripts vs Custom Scripts
 
-9. **Use Provided Skill Scripts (No Custom Fetchers)**: Do NOT write custom fetching/scraping scripts. Use the pre-built API scripts in `skills/[skill_name]/scripts/` (or installed paths like `.agents/skills/`) via **CLI subcommands** (e.g. `node skills/institutional-analyst/scripts/institutional-api.js broker BBCA`). Every API script supports `--help`. For multi-agent workflows see `ORCHESTRATION.md`. The `.data/temp/` directory is for piping JSON output only — not executable code.
+9. **Use Provided Skill Scripts (No Custom Fetchers)**: Do NOT write custom fetching/scraping scripts. Use the pre-built API scripts in `skills/[skill_name]/scripts/` (or installed paths like `.agents/skills/`) via **CLI subcommands** (e.g. `node skills/institutional-analyst/scripts/institutional-api.js broker BBCA`). Every API script supports `--help`. For multi-agent workflows see `ORCHESTRATION.md`. The `.data/temp/` directory is for piping JSON output only — not executable code. **Never** use web search or third-party sites as a substitute when Stockbit auth fails (see Rule 6 HARD STOP).
 
 ### Supported Trading Modes & Intent Mapping
 

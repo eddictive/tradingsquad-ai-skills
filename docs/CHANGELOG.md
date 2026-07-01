@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-07-01
+
+### Added
+- `core/auth-failure.js` / `auth_failure.py` — shared STOP_PIPELINE banner and forbidden-fallback list
+- Auth-check tests for expired refresh token and `STOP_PIPELINE` JSON action
+
+### Changed
+- `auth-check` now prints `⛔ PIPELINE HALTED` banner with explicit agent stop instructions on exit 1
+- `auth-check` JSON output includes `action: STOP_PIPELINE` and `forbidden` list for agents
+- AGENTS.md Rule 6 HARD STOP: no web search, cached data, or partial reports on auth failure
+- All five `SKILL.md` files, `ORCHESTRATION.md`, `INSTALLATION.md` — auth failure zero-fallback policy
+
 ## [1.0.1] - 2026-07-01
 
 ### Added
@@ -47,5 +59,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `.stockbit_token.json` excluded from npm package and git
 - Installer warns when BYOT token file is present (never overwritten)
 
+[1.0.2]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.2
 [1.0.1]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.1
 [1.0.0]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.0

@@ -32,7 +32,11 @@ Apply **AGENTS.md Rule 5** for live vs swing/EOD when market is closed.
 | **Sub-agent** | **No** — go straight to `fundamental-api` |
 | **Standalone** | **Yes — once** after Gate 1: `node scripts/auth-check.js` |
 
-Exit **1** → STOP; direct user to `docs/INSTALLATION.md`.
+### Auth failure — HARD STOP (exit 1)
+
+If Gate 2 exits **1**, or `fundamental-api` reports token/auth/refresh failure: **halt immediately**. Relay the `auth-check` banner to the user. Direct them to `docs/INSTALLATION.md`.
+
+**Forbidden:** run `fundamental-api`; web search/scraping substitutes; cached `.data/temp/` data; alternate auth paths; partial or synthetic valuation reports.
 
 ---
 

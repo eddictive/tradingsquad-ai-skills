@@ -71,7 +71,21 @@ node scripts/install-skills.js --verify
 
 # Manual BYOT preflight (run before API scripts in agent workflows)
 node scripts/auth-check.js
+```
 
+### When `auth-check` fails (exit 1)
+
+The script prints `⛔ PIPELINE HALTED — STOCKBIT AUTH REQUIRED`. **Stop all analysis** — agents must not continue with web search, cached data, or partial reports.
+
+1. Log in to [stockbit.com](https://stockbit.com) in your browser.
+2. DevTools (F12) → **Application** → **Cookies** → `https://stockbit.com`.
+3. Copy the **`credentialStorage`** value.
+4. Paste it into `.stockbit_token.json` in your workspace root (overwrite the old file).
+5. Re-run: `node scripts/auth-check.js` — expect exit 0 before any `*-api` script.
+
+Common causes: expired access token **and** expired refresh token (refresh tokens last ~7 days). Auto-rotation only works while the refresh token is still valid.
+
+```bash
 # Pin a release tag when fetching remotely
 node scripts/install-skills.js --local --all --tag v1.0.0
 ```

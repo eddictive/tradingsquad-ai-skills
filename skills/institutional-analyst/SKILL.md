@@ -59,7 +59,13 @@ node scripts/auth-check.js
 | **Sub-agent** | **No** — proceed directly to their `*-api` |
 | **Standalone** | **Yes — once** after Gate 1 |
 
-Exit **1** → STOP entire pipeline; direct user to `docs/INSTALLATION.md`. Success writes `.data/temp/.auth-preflight.json` (30 min TTL). **Do not** ask sub-agents to re-run auth-check.
+Success writes `.data/temp/.auth-preflight.json` (30 min TTL). **Do not** ask sub-agents to re-run auth-check.
+
+### Auth failure — HARD STOP (exit 1)
+
+If Gate 2 exits **1**, or any `*-api` reports token/auth/refresh failure: **halt the entire pipeline immediately**. Relay the `auth-check` banner (`⛔ PIPELINE HALTED`) to the user. Direct them to refresh `credentialStorage` in `.stockbit_token.json` per `docs/INSTALLATION.md`.
+
+**Forbidden:** delegate sub-agents; run `*-api` scripts; web search/scraping substitutes; cached `.data/temp/` data; alternate auth paths; partial or synthetic reports; writing `report/` files.
 
 ---
 

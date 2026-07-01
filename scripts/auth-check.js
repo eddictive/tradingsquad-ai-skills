@@ -7,30 +7,36 @@ const fs = require('fs');
 const path = require('path');
 const { StockbitClient } = require('../core/stockbit-auth');
 const { isPreflightValid, writePreflightStamp, PREFLIGHT_TTL_MS } = require('../core/auth-preflight');
+const {
+  buildAuthFailurePayload,
+  printAuthFailureBanner,
+  isAuthRelatedError,
+} = require('../core/auth-failure');
 
-const SETUP_HELP = 'See docs/INSTALLATION.md — paste credentialStorage from Stockbit browser DevTools into .stockbit_token.json';
+const SETUP_HELP = 'docs/INSTALLATION.md — paste credentialStorage from Stockbit browser DevTools into .stockbit_token.json';
+
+function emitAuthFailure(payload, { json = false, quiet = false } = {}) {
+  if (!quiet) {
+    if (json) console.log(JSON.stringify(payload, null, 2));
+    else printAuthFailureBanner(payload);
+  }
+  return { ...payload, exitCode: 1 };
+}
 
 async function runAuthCheck(options = {}) {
   const { json = false, quiet = false, verifyNetwork = true, skipIfValid = false } = options;
   const tokenPath = path.join(process.cwd(), '.stockbit_token.json');
 
   if (!fs.existsSync(tokenPath)) {
-    const payload = {
-      ok: false,
-      code: 'TOKEN_MISSING',
-      message: 'No .stockbit_token.json in workspace.',
-      tokenFile: tokenPath,
-      help: SETUP_HELP,
-    };
-    if (!quiet) {
-      if (json) console.log(JSON.stringify(payload, null, 2));
-      else {
-        console.error('❌ STOCKBIT AUTH FAILED — token file missing');
-        console.error(`   Expected : ${tokenPath}`);
-        console.error(`   Fix      : ${SETUP_HELP}`);
-      }
-    }
-    return { ...payload, exitCode: 1 };
+    return emitAuthFailure(
+      buildAuthFailurePayload({
+        code: 'TOKEN_MISSING',
+        message: 'No .stockbit_token.json in workspace.',
+        tokenFile: tokenPath,
+        help: SETUP_HELP,
+      }),
+      { json, quiet }
+    );
   }
 
   if (skipIfValid && isPreflightValid(tokenPath)) {
@@ -67,6 +73,17 @@ async function runAuthCheck(options = {}) {
         result.username = p?.username || result.username;
         result.networkVerified = true;
       } catch (e) {
+        if (isAuthRelatedError(e.message)) {
+          return emitAuthFailure(
+            buildAuthFailurePayload({
+              code: 'TOKEN_INVALID',
+              message: e.message,
+              tokenFile: client.tokenFile,
+              help: SETUP_HELP,
+            }),
+            { json, quiet }
+          );
+        }
         result.networkVerified = false;
         result.networkWarning = e.message;
       }
@@ -90,21 +107,15 @@ async function runAuthCheck(options = {}) {
 
     return { ...result, exitCode: 0 };
   } catch (e) {
-    const payload = {
-      ok: false,
-      code: 'TOKEN_INVALID',
-      message: e.message,
-      tokenFile: client.tokenFile,
-      help: 'Refresh credentialStorage from Stockbit and update .stockbit_token.json',
-    };
-    if (!quiet) {
-      if (json) console.log(JSON.stringify(payload, null, 2));
-      else {
-        console.error(`❌ STOCKBIT AUTH FAILED: ${e.message}`);
-        console.error(`   Fix: ${payload.help}`);
-      }
-    }
-    return { ...payload, exitCode: 1 };
+    return emitAuthFailure(
+      buildAuthFailurePayload({
+        code: 'TOKEN_INVALID',
+        message: e.message,
+        tokenFile: client.tokenFile,
+        help: SETUP_HELP,
+      }),
+      { json, quiet }
+    );
   }
 }
 
