@@ -1,4 +1,6 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
+const fs = require('fs');
+const path = require('path');
 
 class ScannerAPIClient extends StockbitClient {
   /**
@@ -118,10 +120,19 @@ class ScannerAPIClient extends StockbitClient {
   }
 
   /**
-   * Calculate Live Intraday Draggers from Top Big Caps
+   * Calculate Live Intraday Draggers from a specific group
    */
-  async getLiveDraggers() {
-    const giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO'];
+  async getLiveDraggers(groupName = 'giants') {
+    let giants = [];
+    try {
+      const emitensPath = path.join(__dirname, '../../../core/emitens.json');
+      const emitensData = JSON.parse(fs.readFileSync(emitensPath, 'utf8'));
+      giants = emitensData[groupName];
+      if (!giants) throw new Error(`Group '${groupName}' not found in emitens.json`);
+    } catch (e) {
+      console.warn(`[WARN] Falling back to default giants. Error: ${e.message}`);
+      giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO'];
+    }
     const results = [];
     const endTs = Math.floor(Date.now() / 1000);
     const startTs = endTs - (5 * 24 * 60 * 60); // 5 days to handle weekends
@@ -290,8 +301,9 @@ if (require.main === module) {
         const data = await api.runScreener(type);
         console.log(`Screener [${type}]:`, JSON.stringify(data, null, 2));
       } else if (action === 'livedraggers') {
-        const data = await api.getLiveDraggers();
-        console.log(`Live Big Caps Draggers:`, JSON.stringify(data, null, 2));
+        const group = process.argv[3] || 'giants';
+        const data = await api.getLiveDraggers(group);
+        console.log(`Live Draggers [${group}]:`, JSON.stringify(data, null, 2));
       } else if (action === 'topbroker') {
         const period = process.argv[3] || 'TB_PERIOD_LAST_1_DAY';
         const data = await api.getTopBroker(period);

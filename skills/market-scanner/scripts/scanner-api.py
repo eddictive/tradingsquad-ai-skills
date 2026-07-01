@@ -104,11 +104,21 @@ class ScannerAPIClient(StockbitClient):
             
         return result
 
-    def get_live_draggers(self):
+    def get_live_draggers(self, group_name="giants"):
         import time
         from datetime import datetime, timezone, timedelta
         
-        giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO']
+        try:
+            emitens_path = os.path.join(os.path.dirname(__file__), "../../../core/emitens.json")
+            with open(emitens_path, "r") as f:
+                emitens_data = json.load(f)
+            giants = emitens_data.get(group_name)
+            if not giants:
+                raise ValueError(f"Group '{group_name}' not found in emitens.json")
+        except Exception as e:
+            print(f"[WARN] Falling back to default giants. Error: {e}")
+            giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO']
+            
         results = []
         
         end_ts = int(time.time())
@@ -258,8 +268,9 @@ if __name__ == "__main__":
         data = api.run_screener(template)
         print(f"Screener [{template}]:", json.dumps(data, indent=2))
     elif action == "livedraggers":
-        data = api.get_live_draggers()
-        print("Live Big Caps Draggers:", json.dumps(data, indent=2))
+        group = sys.argv[2] if len(sys.argv) > 2 else "giants"
+        data = api.get_live_draggers(group)
+        print(f"Live Draggers [{group}]:", json.dumps(data, indent=2))
     elif action == "topbroker":
         period = sys.argv[2] if len(sys.argv) > 2 else "TB_PERIOD_LAST_1_DAY"
         data = api.get_top_broker(period)

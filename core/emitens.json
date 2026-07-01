@@ -1,0 +1,48 @@
+{
+  "giants": [
+    "AADI", "ADMR", "ADRO", "AKRA", "AMMN", "AMRT", "ANTM", "ASII",
+    "BBCA", "BBNI", "BBRI", "BBTN", "BMRI", "BREN", "BRPT", "BUMI",
+    "CPIN", "CTRA", "DSSA", "EMTK", "EXCL", "GOTO", "HEAL", "ICBP",
+    "INCO", "INDF", "INKP", "ISAT", "ITMG", "JPFA", "KLBF", "MAPI",
+    "MBMA", "MDKA", "MEDC", "NCKL", "PGAS", "PGEO", "PTBA", "SCMA",
+    "SMGR", "TLKM", "TOWR", "UNTR", "UNVR"
+  ],
+  "prajogo": [
+    "BREN", "BRPT", "CDIA", "CUAN", "GZCO", "PTRO", "TPIA"
+  ],
+  "salim": [
+    "INDF", "ICBP", "SIMP", "LSIP", "ROTI", "DNET", "EMTK", "IMAS", "IMJS", "DCII", 
+    "META", "BINA", "AMMN", "BUMI", "BRMS"
+  ],
+  "sinarmas": [
+    "SMAR", "INKP", "TKIM", "SUPR", "SMMA", "BSIM", "DMAS", "DSSA"
+  ],
+  "saratoga": [
+    "SRTG", "ADRO", "AADI", "MDKA", "MBMA", "TBIG", "MPMX", "AGII", "NRCA", "PALM"
+  ],
+  "djarum": [
+    "BBCA", "TOWR", "BELI", "RANC", "HEAL", "SUPER", "SSIA", "DATA", "BACH"
+  ],
+  "thohir": [
+    "ADRO", "AADI", "ADMR", "MDKA", "MBMA", "EMAS", "ESSA", "PALM", "BFIN", "GOTO", 
+    "ISAT", "ABBA", "MARI"
+  ],
+  "lippo": [
+    "LPCK", "LPKR", "SILO", "MPPA", "LPPF", "MLPL", "MLPT", "LINK", "KBLV", "LPGI"
+  ],
+  "bakrie": [
+    "BNBR", "BUMI", "BRMS", "UNSP", "DEWA", "ENRG", "VIVA", "MDIA", "VKTR", "ALII", 
+    "BIPI"
+  ],
+  "energi": [
+    "DSSA", "BUMI", "CUAN", "DEWA", "PTRO", "AADI", "RAJA", "BIPI", "BREN", "ADRO",
+    "ENRG", "MEDC", "PGAS", "ITMG", "PTBA", "ADMR", "INDY", "TCPI", "RATU", "RMKE",
+    "AKRA", "ELSA", "CBRE", "LEAD", "BSSR", "SGER", "TOBA", "TPMA", "BYAN", "ABMM",
+    "MAHA", "GEMS", "KKGI", "SMMT", "ARII", "MCOL", "ITMA", "RIGS", "TEBE", "MBAP"
+  ],
+  "banking": [
+    "BBCA", "BBRI", "BMRI", "BBNI", "BRIS", "BBTN", "NISP", "BDMN", "BNGA", "PNBN", 
+    "BNII", "MEGA", "BBYB", "ARTO", "AGRO", "BTPN", "BVIC", "BJBR", "BJTM", "MAYA", 
+    "BABP", "BBHI", "BINA", "SUPA", "BTPS", "BSIM", "NOBU", "BMAS", "BBSI", "BNLI"
+  ]
+}
