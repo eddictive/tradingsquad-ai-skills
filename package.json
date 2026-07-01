@@ -8,7 +8,24 @@
     "tradingsquad-skills": "./scripts/install-skills.js"
   },
   "scripts": {
-    "install-skills": "./scripts/install-skills.js"
+    "install-skills": "./scripts/install-skills.js",
+    "test": "node --test tests/*.test.js",
+    "check:calendar": "node scripts/check-holiday-calendar.js",
+    "check:version": "node scripts/sync-version.js"
+  },
+  "files": [
+    "scripts/",
+    "skills/",
+    "core/",
+    "tests/",
+    "AGENTS.md",
+    "ORCHESTRATION.md",
+    "docs/",
+    "skills.json",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "repository": {
     "type": "git",

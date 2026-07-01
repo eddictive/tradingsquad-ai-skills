@@ -1,9 +1,95 @@
 {
+  "_meta": {
+    "description": "TradingSquad AI skill manifest for installer and agent auto-discovery",
+    "version": "1.0.0"
+  },
   "entries": [
-    { "path": "skills/institutional-analyst" },
-    { "path": "skills/technical-analyst" },
-    { "path": "skills/fundamental-analyst" },
-    { "path": "skills/sentiment-analyst" },
-    { "path": "skills/market-scanner" }
+    {
+      "id": "institutional-analyst",
+      "path": "skills/institutional-analyst",
+      "name": "Institutional Analyst",
+      "description": "Institutional-grade bandarmology, Wyckoff structure, tape reading, broker flow, and order book intelligence for IDX equities.",
+      "triggers": [
+        "institutional",
+        "bandarmologi",
+        "bandarmology",
+        "wyckoff",
+        "broker flow",
+        "broker summary",
+        "order flow",
+        "smart money",
+        "quant score orchestration"
+      ],
+      "cli_aliases": ["@institutional-analyst", "/institutional-analyst", "institutional analyst"]
+    },
+    {
+      "id": "technical-analyst",
+      "path": "skills/technical-analyst",
+      "name": "Technical Analyst",
+      "description": "Context-aware technical analysis (VWAP, RSI, MACD, Bollinger, MA, Fibonacci, SMC) across intraday through long-term modes.",
+      "triggers": [
+        "technical",
+        "chart",
+        "VWAP",
+        "RSI",
+        "MACD",
+        "support resistance",
+        "fibonacci",
+        "SMC",
+        "momentum"
+      ],
+      "cli_aliases": ["@technical-analyst", "/technical-analyst", "technical analyst"]
+    },
+    {
+      "id": "fundamental-analyst",
+      "path": "skills/fundamental-analyst",
+      "name": "Fundamental Analyst",
+      "description": "Fundamental valuation, keystats ratios, financial reports, intrinsic value, and margin-of-safety analysis.",
+      "triggers": [
+        "fundamental",
+        "fair value",
+        "nilai wajar",
+        "PE ratio",
+        "PBV",
+        "ROE",
+        "financial report",
+        "intrinsic value"
+      ],
+      "cli_aliases": ["@fundamental-analyst", "/fundamental-analyst", "fundamental analyst"]
+    },
+    {
+      "id": "sentiment-analyst",
+      "path": "skills/sentiment-analyst",
+      "name": "Sentiment Analyst",
+      "description": "News catalysts, macro sentiment, corporate actions, and insider flow to detect shakeouts or FOMO traps.",
+      "triggers": [
+        "sentiment",
+        "news",
+        "catalyst",
+        "insider",
+        "macro",
+        "corporate action",
+        "FOMO",
+        "shakeout"
+      ],
+      "cli_aliases": ["@sentiment-analyst", "/sentiment-analyst", "sentiment analyst"]
+    },
+    {
+      "id": "market-scanner",
+      "path": "skills/market-scanner",
+      "name": "Market Scanner",
+      "description": "Market-wide screening, live index draggers, foreign flow movers, and screener templates for IDX.",
+      "triggers": [
+        "scanner",
+        "market scan",
+        "livedraggers",
+        "live draggers",
+        "foreign flow",
+        "market mover",
+        "screener",
+        "top gainers"
+      ],
+      "cli_aliases": ["@market-scanner", "/market-scanner", "market scanner"]
+    }
   ]
 }

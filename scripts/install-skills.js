@@ -15,9 +15,11 @@ const path = require('path');
 const os = require('os');
 const readline = require('readline');
 const https = require('https');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 const userProjectDir = process.cwd();
+const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const REPO_BASE = 'https://github.com/eddictive/tradingsquad-ai-skills/archive/refs';
 
 // Detect if we have local source files
 let skillsSrcDir = '';
@@ -46,13 +48,205 @@ if (!isLocalSource) {
   }
 }
 
-const analysts = [
+const DEFAULT_ANALYSTS = [
   'institutional-analyst',
   'technical-analyst',
   'fundamental-analyst',
   'market-scanner',
-  'sentiment-analyst'
+  'sentiment-analyst',
 ];
+
+function loadSkillIds() {
+  const candidates = [
+    path.join(__dirname, '..', 'skills.json'),
+    path.join(userProjectDir, 'skills.json'),
+  ];
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue;
+    try {
+      const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const ids = (data.entries || [])
+        .map((e) => e.id || path.basename((e.path || '').replace(/\\/g, '/')))
+        .filter(Boolean);
+      if (ids.length > 0) return ids;
+    } catch (e) {
+      console.warn(`⚠️  Could not parse ${p}: ${e.message}`);
+    }
+  }
+  return DEFAULT_ANALYSTS;
+}
+
+function resolveTarballUrl(tag) {
+  if (!tag || tag === 'master' || tag === 'main') {
+    return `${REPO_BASE}/heads/master.tar.gz`;
+  }
+  const normalized = tag.startsWith('v') ? tag : `v${tag}`;
+  return `${REPO_BASE}/tags/${normalized}.tar.gz`;
+}
+
+function getTagFromArgs(args) {
+  const tagIdx = args.indexOf('--tag');
+  if (tagIdx !== -1 && args[tagIdx + 1]) return args[tagIdx + 1];
+  return PKG.version;
+}
+
+function writeVersionStamp(tag) {
+  const stampPath = path.join(userProjectDir, '.tradingsquad-version');
+  const payload = {
+    version: PKG.version,
+    tag: tag || PKG.version,
+    installedAt: new Date().toISOString(),
+    package: PKG.name,
+  };
+  fs.writeFileSync(stampPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+  console.log(`   ✅ Wrote version stamp → .tradingsquad-version (${payload.version})`);
+}
+
+function fetchUrlJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (response) => {
+      if (response.statusCode === 301 || response.statusCode === 302) {
+        fetchUrlJson(response.headers.location).then(resolve).catch(reject);
+        return;
+      }
+      if (response.statusCode !== 200) {
+        reject(new Error(`HTTP ${response.statusCode} fetching ${url}`));
+        return;
+      }
+      let body = '';
+      response.on('data', (chunk) => { body += chunk; });
+      response.on('end', () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+function fetchRemotePackageVersion(tag) {
+  const ref = (!tag || tag === 'master' || tag === 'main') ? 'master' : (tag.startsWith('v') ? tag : `v${tag}`);
+  const url = `https://raw.githubusercontent.com/eddictive/tradingsquad-ai-skills/${ref}/package.json`;
+  return fetchUrlJson(url).then((pkg) => pkg.version);
+}
+
+async function checkForUpdates(tag) {
+  const stampPath = path.join(userProjectDir, '.tradingsquad-version');
+  const localVersion = fs.existsSync(stampPath)
+    ? JSON.parse(fs.readFileSync(stampPath, 'utf8')).version
+    : null;
+
+  console.log(`📦 Installed: ${localVersion || 'unknown'} · Package: ${PKG.version}`);
+  try {
+    const remoteVersion = await fetchRemotePackageVersion(tag);
+    console.log(`🌐 Remote (${tag || 'master'}): ${remoteVersion}`);
+    if (localVersion && localVersion !== remoteVersion) {
+      console.log(`⬆️  Update available: ${localVersion} → ${remoteVersion}`);
+      console.log(`   Run: npx tradingsquad-ai-skills --tag ${remoteVersion}`);
+      return { updateAvailable: true, localVersion, remoteVersion };
+    }
+    if (localVersion === remoteVersion) {
+      console.log(`✅ You are on the latest version (${remoteVersion}).`);
+    }
+    return { updateAvailable: false, localVersion, remoteVersion };
+  } catch (e) {
+    console.warn(`⚠️  Could not check remote version: ${e.message}`);
+    return { updateAvailable: false, error: e.message };
+  }
+}
+
+async function runVerify() {
+  console.log(`\n🔍 Running post-install verification...\n`);
+  let ok = true;
+
+  const tradingDayScript = path.join(userProjectDir, 'scripts', 'trading-day-check.js');
+  const tradingDayFallback = path.join(__dirname, 'trading-day-check.js');
+  const tdScript = fs.existsSync(tradingDayScript) ? tradingDayScript : tradingDayFallback;
+
+  const openDay = spawnSync(process.execPath, [tdScript, '2026-07-02'], { encoding: 'utf8' });
+  if (openDay.status === 0) {
+    console.log(`   ✅ trading-day-check: weekday open day (2026-07-02)`);
+  } else {
+    console.log(`   ❌ trading-day-check: expected open day exit 0, got ${openDay.status}`);
+    ok = false;
+  }
+
+  const holiday = spawnSync(process.execPath, [tdScript, '2026-08-17'], { encoding: 'utf8' });
+  if (holiday.status === 1) {
+    console.log(`   ✅ trading-day-check: holiday closed (2026-08-17)`);
+  } else {
+    console.log(`   ❌ trading-day-check: expected holiday exit 1, got ${holiday.status}`);
+    ok = false;
+  }
+
+  const tokenPath = path.join(userProjectDir, '.stockbit_token.json');
+  if (!fs.existsSync(tokenPath)) {
+    console.log(`   ⚠️  auth-smoke: skipped (no .stockbit_token.json in workspace)`);
+  } else {
+    try {
+      const { StockbitClient } = require(path.join(__dirname, '..', 'core', 'stockbit-auth.js'));
+      const client = new StockbitClient();
+      await client.login();
+      console.log(`   ✅ auth-smoke: BYOT token loaded successfully`);
+    } catch (e) {
+      console.log(`   ❌ auth-smoke: ${e.message}`);
+      ok = false;
+    }
+  }
+
+  if (ok) {
+    console.log(`\n✅ Verification passed.`);
+  } else {
+    console.log(`\n❌ Verification failed — see messages above.`);
+    process.exit(1);
+  }
+}
+
+function buildCodexAgentsAppendix() {
+  const skills = loadSkillIds();
+  const lines = skills.map((id) => {
+    const label = id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return `*   **${label}:** Guided by [SKILL.md](.codex/skills/${id}/SKILL.md).`;
+  });
+  return `
+
+# Project Agents & Guidelines (Codex CLI) 🤖
+
+This file registers the active AI Analyst guidelines for the OpenAI Codex CLI.
+
+## Active Analysts
+
+${lines.join('\n')}
+
+## Operational Standards
+All analysis must respect the specifications detailed under \`.codex/skills/\` and workspace \`scripts/\`.
+`;
+}
+
+function buildGrokMdContent() {
+  const skills = loadSkillIds();
+  const lines = skills.map((id) => {
+    const label = id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return `*   **${label}:** Setup in [.grok/skills/${id}/SKILL.md](.grok/skills/${id}/SKILL.md).`;
+  });
+  return `# Grok Analyst Instructions 🧠
+
+This file defines the project instructions for the Grok XAi CLI.
+
+## 📜 Master Rules (CRITICAL)
+Before executing any analysis, you MUST strictly adhere to the project-wide Master Rules defined in:
+*   [Master Rules](AGENTS.md)
+
+## Available Specialized Skills
+
+${lines.join('\n')}
+
+## Usage Standard
+When asked to act as one of these analysts, read and apply the standards, rules, and scripts specified in the corresponding folder.
+`;
+}
 
 // Target Paths
 const targets = {
@@ -122,6 +316,45 @@ function installAgentsMd(destDir) {
   }
 }
 
+const WORKSPACE_SHIMS = [
+  '_resolve-skill-script.js',
+  '_resolve_skill_script.py',
+  'trading-day-check.js',
+  'trading-day-check.py',
+  'scanner-api.js',
+  'scanner-api.py',
+  'quant-score.js',
+  'quant-score.py',
+];
+
+const WORKSPACE_AGENT_DOCS = ['ORCHESTRATION.md'];
+
+function deployWorkspaceShims() {
+  const destScriptsDir = path.join(userProjectDir, 'scripts');
+  ensureDir(destScriptsDir);
+
+  for (const shim of WORKSPACE_SHIMS) {
+    const src = path.join(__dirname, shim);
+    const dest = path.join(destScriptsDir, shim);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+      try { fs.chmodSync(dest, 0o755); } catch (e) {}
+    }
+  }
+  console.log(`   ✅ Deployed workspace script shims to scripts/`);
+}
+
+function deployWorkspaceAgentDocs() {
+  for (const doc of WORKSPACE_AGENT_DOCS) {
+    const src = path.join(__dirname, '..', doc);
+    const dest = path.join(userProjectDir, doc);
+    if (fs.existsSync(src) && path.resolve(src) !== path.resolve(dest)) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+  console.log(`   ✅ Deployed agent docs (${WORKSPACE_AGENT_DOCS.join(', ')}) to workspace root`);
+}
+
 function installSkillsJson(destDir) {
   const rootSkillsJson = path.join(__dirname, '..', 'skills.json');
   const targetSkillsJson = path.join(destDir, 'skills.json');
@@ -181,15 +414,15 @@ function downloadAndExtractTarball(url, destDir) {
   });
 }
 
-async function ensureSkillsSrc() {
+async function ensureSkillsSrc(tag) {
   if (isLocalSource) {
     return skillsSrcDir;
   }
 
-  console.log(`ℹ️  Local skills source not found. Fetching from GitHub...`);
+  const tarballUrl = resolveTarballUrl(tag);
+  console.log(`ℹ️  Local skills source not found. Fetching from GitHub (${tag || 'master'})...`);
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tradingsquad-skills-'));
-  const tarballUrl = 'https://github.com/eddictive/tradingsquad-ai-skills/archive/refs/heads/master.tar.gz';
-  
+
   await downloadAndExtractTarball(tarballUrl, tempDir);
   
   const files = fs.readdirSync(tempDir);
@@ -223,11 +456,23 @@ function askQuestion(query) {
   });
 }
 
-async function installSkillsFor(clis, isGlobal) {
+function warnIfTokenPresent() {
+  const tokenPath = path.join(userProjectDir, '.stockbit_token.json');
+  if (!fs.existsSync(tokenPath)) return;
+  console.log(`🔐 BYOT token detected at .stockbit_token.json`);
+  console.log(`   The installer will NOT overwrite your credentials.`);
+  console.log(`   Never commit this file — it is listed in .gitignore and excluded from npm publish.\n`);
+}
+
+async function installSkillsFor(clis, isGlobal, options = {}) {
+  const { tag = PKG.version, verify = false } = options;
   const scopeStr = isGlobal ? 'GLOBAL' : 'LOCAL';
   console.log(`\n🚀 Installing TradingSquad AI in ${scopeStr} mode...\n`);
 
-  const srcDir = await ensureSkillsSrc();
+  if (!isGlobal) warnIfTokenPresent();
+
+  const analysts = loadSkillIds();
+  const srcDir = await ensureSkillsSrc(tag);
 
   if (clis.includes('antigravity')) {
     const agDest = isGlobal ? targets.antigravity.global : targets.antigravity.local;
@@ -285,8 +530,10 @@ async function installSkillsFor(clis, isGlobal) {
       console.log(`   ✅ Loaded core module`);
     }
 
-    // Copy Master Rules
-    installAgentsMd(isGlobal ? path.join(os.homedir(), '.claude') : path.join(userProjectDir, '.claude'));
+    // Copy Master Rules & Config
+    const claudeConfigDest = isGlobal ? path.join(os.homedir(), '.claude') : path.join(userProjectDir, '.claude');
+    installAgentsMd(claudeConfigDest);
+    installSkillsJson(claudeConfigDest);
   }
 
   if (clis.includes('codex')) {
@@ -324,22 +571,11 @@ async function installSkillsFor(clis, isGlobal) {
         console.log(`   ✅ Created .codex/config.toml`);
       }
 
+      installAgentsMd(codexConfigDir);
+      installSkillsJson(codexConfigDir);
+
       const agentsMdPath = path.join(userProjectDir, 'AGENTS.md');
-      const agentsContent = `\n\n# Project Agents & Guidelines (Codex CLI) 🤖
-
-This file registers the active AI Analyst guidelines for the OpenAI Codex CLI.
-
-## Active Analysts
-
-*   **Institutional Analyst:** Focuses on quantitative analysis, Wyckoff market structure, tape reading, order flow, and broker summary. Guided by [SKILL.md](file://./skills/institutional-analyst/SKILL.md).
-*   **Technical Analyst:** Focuses on charts and indicators. Guided by [SKILL.md](file://./skills/technical-analyst/SKILL.md).
-*   **Fundamental Analyst:** Focuses on intrinsic asset values. Guided by [SKILL.md](file://./skills/fundamental-analyst/SKILL.md).
-*   **Market Scanner:** Focuses on intraday live draggers and foreign flow screening. Guided by [SKILL.md](file://./skills/market-scanner/SKILL.md).
-*   **Sentiment Analyst:** Focuses on insider flow and retail noise. Guided by [SKILL.md](file://./skills/sentiment-analyst/SKILL.md).
-
-## Operational Standards
-All analysis must respect the specifications detailed under the respective \`SKILL.md\` and \`scripts/\` directories.
-`;
+      const agentsContent = buildCodexAgentsAppendix();
       if (fs.existsSync(agentsMdPath)) {
         const existing = fs.readFileSync(agentsMdPath, 'utf8');
         if (!existing.includes('Project Agents & Guidelines (Codex CLI)')) {
@@ -374,8 +610,9 @@ All analysis must respect the specifications detailed under the respective \`SKI
       console.log(`   ✅ Loaded core module`);
     }
     
-    // Copy Master Rules
-    installAgentsMd(isGlobal ? path.join(os.homedir(), '.grok') : path.join(userProjectDir, '.grok'));
+    const grokConfigDest = isGlobal ? path.join(os.homedir(), '.grok') : path.join(userProjectDir, '.grok');
+    installAgentsMd(grokConfigDest);
+    installSkillsJson(grokConfigDest);
 
     if (!isGlobal) {
       console.log(`🧠 Configuring for Grok XAi CLI...`);
@@ -385,26 +622,7 @@ All analysis must respect the specifications detailed under the respective \`SKI
       console.log(`   📂 Pre-created local state directory: .grok/state/`);
 
       const grokMdPath = path.join(grokConfigDir, 'grok.md');
-      const grokContent = `# Grok Analyst Instructions 🧠
-
-This file defines the project instructions for the Grok XAi CLI.
-
-## 📜 Master Rules (CRITICAL)
-Before executing any analysis, you MUST strictly adhere to the project-wide Master Rules defined in:
-*   [Master Rules](file://./AGENTS.md)
-
-## Available Specialized Skills
-
-*   **Institutional Analyst:** Focuses on Wyckoff, tape reading, order flow. Setup in [skills/institutional-analyst/SKILL.md](file://./skills/institutional-analyst/SKILL.md).
-*   **Technical Analyst:** Focuses on indicators, chart patterns. Setup in [skills/technical-analyst/SKILL.md](file://./skills/technical-analyst/SKILL.md).
-*   **Fundamental Analyst:** Focuses on value and financials. Setup in [skills/fundamental-analyst/SKILL.md](file://./skills/fundamental-analyst/SKILL.md).
-*   **Market Scanner:** Focuses on intraday live draggers and foreign flow screening. Setup in [skills/market-scanner/SKILL.md](file://./skills/market-scanner/SKILL.md).
-*   **Sentiment Analyst:** Focuses on insider flow and retail noise. Setup in [skills/sentiment-analyst/SKILL.md](file://./skills/sentiment-analyst/SKILL.md).
-
-## Usage Standard
-When asked to act as one of these analysts, read and apply the standards, rules, and scripts specified in the corresponding folder.
-`;
-      fs.writeFileSync(grokMdPath, grokContent, 'utf8');
+      fs.writeFileSync(grokMdPath, buildGrokMdContent(), 'utf8');
       console.log(`   ✅ Created .grok/grok.md`);
     }
   }
@@ -429,9 +647,22 @@ When asked to act as one of these analysts, read and apply the standards, rules,
       copyFolderSync(coreSrcDir, coreDest);
       console.log(`   ✅ Loaded core module`);
     }
+
+    installAgentsMd(isGlobal ? path.join(os.homedir(), '.tradingsquad-ai') : userProjectDir);
+    installSkillsJson(isGlobal ? path.join(os.homedir(), '.tradingsquad-ai') : userProjectDir);
+  }
+
+  if (!isGlobal) {
+    deployWorkspaceShims();
+    deployWorkspaceAgentDocs();
+    writeVersionStamp(tag);
   }
 
   console.log(`\n🎉 Installation complete!`);
+
+  if (verify) {
+    await runVerify();
+  }
 }
 
 async function runInteractive() {
@@ -479,7 +710,7 @@ async function runInteractive() {
   const scopeChoice = await askQuestion(`\nEnter choice (1-2): `);
   const isGlobal = scopeChoice === '2';
 
-  await installSkillsFor(selectedCLIs, isGlobal);
+  await installSkillsFor(selectedCLIs, isGlobal, { tag: PKG.version });
 }
 
 const args = process.argv.slice(2);
@@ -496,24 +727,40 @@ if (args.includes('--help') || args.includes('-h')) {
   console.log(`  --grok           Only install for Grok Build CLI`);
   console.log(`  --other          Only install generic .skills/ folder`);
   console.log(`  --all            Install for all CLIs (default)`);
+  console.log(`  --tag <version>  Git tag or version for remote tarball (default: package.json version)`);
+  console.log(`  --verify         Run auth smoke + trading-day-check after install`);
+  console.log(`  --check-updates  Compare installed version with remote (no install)`);
   process.exit(0);
 }
 
 (async () => {
+  const tag = getTagFromArgs(args);
+
+  if (args.includes('--check-updates')) {
+    await checkForUpdates(tag);
+    process.exit(0);
+  }
+
+  if (args.includes('--verify') && !args.some((a) => ['--local', '--global', '--all', '--antigravity', '--claude', '--codex', '--grok', '--other'].includes(a))) {
+    await runVerify();
+    process.exit(0);
+  }
+
   if (args.length > 0) {
     const isGlobal = args.includes('--global');
+    const verify = args.includes('--verify');
     let selectedCLIs = [];
     if (args.includes('--antigravity')) selectedCLIs.push('antigravity');
     if (args.includes('--claude')) selectedCLIs.push('claude');
     if (args.includes('--codex')) selectedCLIs.push('codex');
     if (args.includes('--grok')) selectedCLIs.push('grok');
     if (args.includes('--other')) selectedCLIs.push('other');
-    
+
     if (selectedCLIs.length === 0 || args.includes('--all')) {
       selectedCLIs = ['antigravity', 'claude', 'codex', 'grok', 'other'];
     }
-    
-    await installSkillsFor(selectedCLIs, isGlobal);
+
+    await installSkillsFor(selectedCLIs, isGlobal, { tag, verify });
   } else {
     await runInteractive();
   }

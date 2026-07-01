@@ -1,4 +1,7 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
+const { RULE_OF_FIVE, trimToRuleOfFive } = require('../../../core/rule-of-five.js');
+const { getWIBDateString } = require('../../../core/wib.js');
+const { mapPool } = require('../../../core/concurrency.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -18,7 +21,7 @@ class ScannerAPIClient extends StockbitClient {
     const response = await this._getExodus('/order-trade/market-mover', params);
     if (!response.data || !response.data.mover_list) return [];
     
-    return response.data.mover_list.slice(0, 10).map(m => ({
+    return trimToRuleOfFive(response.data.mover_list).map(m => ({
       ticker: m.stock_detail.code,
       price: m.price,
       change_percent: m.change.percentage.toFixed(2) + '%',
@@ -56,13 +59,13 @@ class ScannerAPIClient extends StockbitClient {
         if (!response.data.top_buy && !response.data.top_sell) break;
     }
     
-    const topBuy = allTopBuy.slice(0, maxPages * 10).map(b => ({
+    const topBuy = trimToRuleOfFive(allTopBuy).map(b => ({
       ticker: b.code,
       value: b.value.formatted,
       avg_price: b.average.formatted
     }));
     
-    const topSell = allTopSell.slice(0, maxPages * 10).map(s => ({
+    const topSell = trimToRuleOfFive(allTopSell).map(s => ({
       ticker: s.code,
       value: s.value.formatted,
       avg_price: s.average.formatted
@@ -133,39 +136,32 @@ class ScannerAPIClient extends StockbitClient {
       console.warn(`[WARN] Falling back to default giants. Error: ${e.message}`);
       giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO'];
     }
-    const results = [];
     const endTs = Math.floor(Date.now() / 1000);
-    const startTs = endTs - (5 * 24 * 60 * 60); // 5 days to handle weekends
-    
-    // Konversi ke format string YYYY-MM-DD sesuai zona waktu lokal bursa (WIB)
-    // Date.now() di server mungkin UTC, maka sesuaikan ke UTC+7 (25200 detik)
-    const wibDate = new Date(Date.now() + 25200000);
-    const todayStr = wibDate.toISOString().split('T')[0];
+    const startTs = endTs - (5 * 24 * 60 * 60);
+    const todayStr = getWIBDateString();
 
-    for (const ticker of giants) {
-      try {
-        const rawData = await this._getExodus(`/chartbit/${ticker}/price/intraday`, {
-          from: endTs,
-          to: startTs,
-          limit: 0,
-          minutes_multiplier: 1
-        });
-        const candles = rawData?.data?.chartbit || [];
-        const todayCandles = candles.filter(c => (c.datetime || '').startsWith(todayStr));
-        const prevCandles = candles.filter(c => !(c.datetime || '').startsWith(todayStr));
-        
-        if (todayCandles.length > 0 && prevCandles.length > 0) {
-          todayCandles.sort((a,b) => a.unix_timestamp - b.unix_timestamp);
-          prevCandles.sort((a,b) => a.unix_timestamp - b.unix_timestamp);
-          
-          const open = todayCandles[0].open;
-          const prevClose = prevCandles[prevCandles.length - 1].close;
-          const close = todayCandles[todayCandles.length - 1].close;
-          const change = ((close - prevClose) / prevClose) * 100;
-          results.push({ ticker, open, prevClose, close, changePercent: change.toFixed(2) + '%' });
-        }
-      } catch (e) {}
-    }
+    const results = await mapPool(giants, 4, async (ticker) => {
+      const rawData = await this._getExodus(`/chartbit/${ticker}/price/intraday`, {
+        from: endTs,
+        to: startTs,
+        limit: 0,
+        minutes_multiplier: 1,
+      });
+      const candles = rawData?.data?.chartbit || [];
+      const todayCandles = candles.filter((c) => (c.datetime || '').startsWith(todayStr));
+      const prevCandles = candles.filter((c) => !(c.datetime || '').startsWith(todayStr));
+
+      if (todayCandles.length === 0 || prevCandles.length === 0) return null;
+
+      todayCandles.sort((a, b) => a.unix_timestamp - b.unix_timestamp);
+      prevCandles.sort((a, b) => a.unix_timestamp - b.unix_timestamp);
+
+      const open = todayCandles[0].open;
+      const prevClose = prevCandles[prevCandles.length - 1].close;
+      const close = todayCandles[todayCandles.length - 1].close;
+      const change = ((close - prevClose) / prevClose) * 100;
+      return { ticker, open, prevClose, close, changePercent: change.toFixed(2) + '%' };
+    });
     const lifters = results.filter(r => parseFloat(r.changePercent) >= 0)
                            .sort((a, b) => parseFloat(b.changePercent) - parseFloat(a.changePercent));
     const draggers = results.filter(r => parseFloat(r.changePercent) < 0)
@@ -187,7 +183,7 @@ class ScannerAPIClient extends StockbitClient {
     const response = await this._getExodus('/order-trade/broker/top', params);
     if (!response.data || !response.data.list) return [];
     
-    return response.data.list.slice(0, 10).map(b => ({
+    return trimToRuleOfFive(response.data.list).map(b => ({
       broker_code: b.code,
       name: b.name,
       total_value: b.total_value,
@@ -214,12 +210,14 @@ class ScannerAPIClient extends StockbitClient {
       ticker: i.netbs_stock_code,
       avg_price: i.netbs_buy_avg_price || i.netbs_sell_avg_price,
       value: i.bval || i.sval
-    })).sort((a, b) => Math.abs(parseFloat(b.value)) - Math.abs(parseFloat(a.value))).slice(0, 10);
+    })).sort((a, b) => Math.abs(parseFloat(b.value)) - Math.abs(parseFloat(a.value)));
+    const topBuy = trimToRuleOfFive(formatNetbs(summary.brokers_buy || []));
+    const topSell = trimToRuleOfFive(formatNetbs(summary.brokers_sell || []));
 
     return {
       bandar_detector: response.data.bandar_detector || {},
-      top_buy: formatNetbs(summary.brokers_buy || []),
-      top_sell: formatNetbs(summary.brokers_sell || [])
+      top_buy: topBuy,
+      top_sell: topSell
     };
   }
 
@@ -229,7 +227,7 @@ class ScannerAPIClient extends StockbitClient {
   async getTrending() {
     const response = await this._getExodus('/emitten/trending');
     if (!response.data || !response.data.list) return [];
-    return response.data.list.slice(0, 15).map(t => ({
+    return trimToRuleOfFive(response.data.list).map(t => ({
       ticker: t.code,
       company_name: t.name,
       rank_change: t.rank_change
@@ -244,7 +242,7 @@ class ScannerAPIClient extends StockbitClient {
       transaction_type: 'TRANSACTION_TYPE_NET',
       market_board: 'MARKET_BOARD_REGULER',
       investor_type: 'INVESTOR_TYPE_ALL',
-      limit: 25,
+      limit: RULE_OF_FIVE,
       period: period
     };
     const response = await this._getExodus(`/marketdetectors/${ticker}`, params);
@@ -256,7 +254,10 @@ class ScannerAPIClient extends StockbitClient {
    * Get Running Trade for specific symbols
    * @param {string[]} symbols Array of tickers, e.g. ['CUAN', 'BREN']
    */
-  async getRunningTrade(symbols, limit = 50) {
+  /**
+   * Rule-of-5 exception: tape reading needs more ticks for velocity analysis.
+   */
+  async getRunningTrade(symbols, limit = 20) {
     // Manually construct query params because of array brackets like symbols[]=A&symbols[]=B
     let queryString = `action_type=RUNNING_TRADE_ACTION_TYPE_ALL&sort=DESC&limit=${limit}&order_by=RUNNING_TRADE_ORDER_BY_TIME`;
     if (symbols && symbols.length > 0) {
@@ -280,59 +281,75 @@ class ScannerAPIClient extends StockbitClient {
   }
 }
 
-if (require.main === module) {
-  (async () => {
-    const api = new ScannerAPIClient();
-    try {
-      await api.login();
-      const action = process.argv[2] || 'mover';
-      
-      if (action === 'mover') {
-        const type = process.argv[3] || 'MOVER_TYPE_NET_FOREIGN_BUY';
-        const data = await api.getMarketMover(type);
-        console.log(`Top Movers [${type}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'topstock') {
-        const start = process.argv[3] || '2026-06-26';
-        const end = process.argv[4] || '2026-06-26';
-        const data = await api.getTopStock(start, end);
-        console.log(`Top Foreign Stock (${start} to ${end}):`, JSON.stringify(data, null, 2));
-      } else if (action === 'screener') {
-        const type = process.argv[3] || 'ACCUMULATION';
-        const data = await api.runScreener(type);
-        console.log(`Screener [${type}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'livedraggers') {
-        const group = process.argv[3] || 'giants';
-        const data = await api.getLiveDraggers(group);
-        console.log(`Live Draggers [${group}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'topbroker') {
-        const period = process.argv[3] || 'TB_PERIOD_LAST_1_DAY';
-        const data = await api.getTopBroker(period);
-        console.log(`Top Brokers [${period}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'whale') {
-        const broker = process.argv[3];
-        if (!broker) throw new Error('Provide broker code, e.g. node scanner-api.js whale AK');
-        const data = await api.getWhaleActivity(broker);
-        console.log(`Whale Activity [${broker}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'trending') {
-        const data = await api.getTrending();
-        console.log(`Trending Stocks:`, JSON.stringify(data, null, 2));
-      } else if (action === 'detector') {
-        const ticker = process.argv[3];
-        if (!ticker) throw new Error('Provide ticker code, e.g. node scanner-api.js detector CUAN');
-        const period = process.argv[4] || 'BROKER_SUMMARY_PERIOD_LATEST';
-        const data = await api.getSymbolDetector(ticker, period);
-        console.log(`Symbol Detector [${ticker}]:`, JSON.stringify(data, null, 2));
-      } else if (action === 'tape') {
-        const symbolsArg = process.argv[3]; // e.g. "CUAN,BREN"
-        const symbols = symbolsArg ? symbolsArg.split(',') : [];
-        const limit = parseInt(process.argv[4] || '20', 10);
-        const data = await api.getRunningTrade(symbols, limit);
-        console.log(`Running Trade Tape:`, JSON.stringify(data, null, 2));
-      }
-    } catch (e) {
-      console.error(e.message);
-    }
-  })();
+const SCANNER_CLI_COMMANDS = [
+  { usage: 'livedraggers [GROUP]', detail: 'Live intraday draggers/lifters (default group: giants)' },
+  { usage: 'detector <TICKER> [PERIOD]', detail: 'Symbol bandar detector & broker summary' },
+  { usage: 'tape <TICKERS> [LIMIT]', detail: 'Running trade tape (Rule-of-5 exception, default 20)' },
+  { usage: 'whale <BROKER>', detail: 'Stocks accumulated by a specific broker' },
+  { usage: 'topbroker [PERIOD]', detail: 'Top brokers by transaction value' },
+  { usage: 'trending', detail: 'Crowd sentiment / trending stocks' },
+  { usage: 'mover [TYPE]', detail: 'Market movers (EOD-delayed foreign flow)' },
+  { usage: 'topstock <START> <END>', detail: 'Top foreign buy/sell by date range' },
+  { usage: 'screener [ACCUMULATION|REBOUND]', detail: 'Custom screener template' },
+];
+
+function printScannerHelp() {
+  const { printHelp } = require('../../../core/cli-help.js');
+  printHelp('scanner-api.js', 'Market-wide scanner & live tape API', SCANNER_CLI_COMMANDS);
 }
 
-module.exports = { ScannerAPIClient };
+async function runScannerCLI(argv) {
+  const { wantsHelp } = require('../../../core/cli-help.js');
+  if (wantsHelp(argv) || argv.length === 0) {
+    printScannerHelp();
+    process.exit(argv.length === 0 ? 1 : 0);
+  }
+
+  const api = new ScannerAPIClient();
+  await api.login();
+  const action = argv[0] || 'mover';
+
+  if (action === 'mover') {
+    const type = argv[1] || 'MOVER_TYPE_NET_FOREIGN_BUY';
+    console.log(JSON.stringify(await api.getMarketMover(type), null, 2));
+  } else if (action === 'topstock') {
+    const start = argv[1] || '2026-06-26';
+    const end = argv[2] || '2026-06-26';
+    console.log(JSON.stringify(await api.getTopStock(start, end), null, 2));
+  } else if (action === 'screener') {
+    const type = argv[1] || 'ACCUMULATION';
+    console.log(JSON.stringify(await api.runScreener(type), null, 2));
+  } else if (action === 'livedraggers') {
+    const group = argv[1] || 'giants';
+    console.log(JSON.stringify(await api.getLiveDraggers(group), null, 2));
+  } else if (action === 'topbroker') {
+    const period = argv[1] || 'TB_PERIOD_LAST_1_DAY';
+    console.log(JSON.stringify(await api.getTopBroker(period), null, 2));
+  } else if (action === 'whale') {
+    const broker = argv[1];
+    if (!broker) throw new Error('Usage: scanner-api.js whale <BROKER>');
+    console.log(JSON.stringify(await api.getWhaleActivity(broker), null, 2));
+  } else if (action === 'trending') {
+    console.log(JSON.stringify(await api.getTrending(), null, 2));
+  } else if (action === 'detector') {
+    const ticker = argv[1];
+    if (!ticker) throw new Error('Usage: scanner-api.js detector <TICKER>');
+    const period = argv[2] || 'BROKER_SUMMARY_PERIOD_LATEST';
+    console.log(JSON.stringify(await api.getSymbolDetector(ticker, period), null, 2));
+  } else if (action === 'tape') {
+    const symbols = argv[1] ? argv[1].split(',') : [];
+    const limit = parseInt(argv[2] || '20', 10);
+    console.log(JSON.stringify(await api.getRunningTrade(symbols, limit), null, 2));
+  } else {
+    throw new Error(`Unknown command: ${action}. Run with --help.`);
+  }
+}
+
+if (require.main === module) {
+  runScannerCLI(process.argv.slice(2)).catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { ScannerAPIClient, printScannerHelp };

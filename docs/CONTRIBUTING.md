@@ -37,9 +37,10 @@ When updating `SKILL.md` (the brain of the AI):
 
 1. Fork the repository and create a feature branch (`git checkout -b feature/new-indicator`).
 2. Implement your changes in both JS and Python.
-3. Test your script locally via terminal:
+3. Test your script locally via CLI (all scripts support `--help`):
    ```bash
-   node -e "const { TechnicalAPIClient } = require('./skills/technical-analyst/scripts/technical-api.js'); ..."
+   node skills/technical-analyst/scripts/technical-api.js BBCA swing
+   node skills/institutional-analyst/scripts/institutional-api.js broker BBCA
    ```
 4. Submit a PR outlining the mathematical basis of your indicator or the logic of your prompt change.
 

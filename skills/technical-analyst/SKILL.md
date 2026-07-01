@@ -16,30 +16,32 @@ You are fully adaptive. For market data, utilize **either** `technical-api.js` *
 **CRITICAL RULES FOR SCRIPT USAGE**:
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `technical-api.js` or `technical-api.py` located in this skill's `scripts/` directory.
-3. **Execution Examples**: Use the `run_command` tool to execute a one-liner.
-   The API has a powerful `getAnalysis` function that auto-calculates everything based on `mode` ('intraday', 'swing', 'longterm').
-   
-   **Python3 Example (Recommended for simplicity):**
-   `python3 .agents/skills/technical-analyst/scripts/technical-api.py BBCA swing`
-
-   **Node.js Example:**
-   `node -e "const { TechnicalAPIClient } = require('./.agents/skills/technical-analyst/scripts/technical-api.js'); (async () => { const api = new TechnicalAPIClient(); await api.login(); console.log(JSON.stringify(await api.getAnalysis('TINS', 'swing'), null, 2)); })()"`
+3. **CLI Examples** (run with `--help` for modes):
+   ```bash
+   node skills/technical-analyst/scripts/technical-api.js BBCA short_swing
+   python3 skills/technical-analyst/scripts/technical-api.py BBCA intraday
+   ```
+   Canonical modes: `core/trading-modes.json` — `intraday`, `short_swing`, `swing`, `longterm`.
 
 ---
 
 ## INTERPRETING THE MODES
 
-When invoked, the user or Master Orchestrator will specify a trading style. You must call `getAnalysis(ticker, mode)` with the appropriate mode:
+When invoked, the user or Master Orchestrator will specify a trading style. You must call `getAnalysis(ticker, mode)` with the appropriate mode from `core/trading-modes.json`:
 
-### 1. Mode: 'intraday' (Day Trading)
-*   **Focus**: VWAP and short-term momentum.
+### 1. Mode: `intraday` (Day Trading / Scalping)
+*   **Focus**: VWAP (computed from 09:00–16:00 WIB session) and short-term momentum.
 *   **Strategy**: If Price > VWAP, it's bullish intraday. If Price < VWAP, it's bearish. Use MA9 and MA21 for quick momentum shifts. Use the daily Fibonacci for extreme day-trade entry/exit points.
 
-### 2. Mode: 'swing' (Days to Weeks)
-*   **Focus**: MA10, MA20, MA50, and 3-Month Fibonacci.
+### 2. Mode: `short_swing` (1–3 Weeks)
+*   **Focus**: 15m/1h structure, MA10, MA20, MA50, daily Fibonacci.
+*   **Strategy**: Look for bounce plays at MA20 or MA50 on short-term pullbacks. Check RSI-14 for overbought (>70) conditions. Compare today's VWAP against multi-day structure.
+
+### 3. Mode: `swing` (1–3 Months / Medium Term)
+*   **Focus**: Daily/4h structure, MA10, MA20, MA50, and 3-Month Fibonacci.
 *   **Strategy**: Look for bounce plays (Buy on Weakness) at MA20 or MA50. Use Fibonacci 0.382 or 0.618 (Golden Ratio) for precise Entry accumulation zones. Check RSI-14 to ensure it's not overbought (>70). Look for MACD Crossovers or Bollinger Squeeze for breakout confirmation.
 
-### 3. Mode: 'longterm' (Months to Years)
+### 4. Mode: `longterm` (Months to Years)
 *   **Focus**: MA50, MA200, and 1-Year Fibonacci.
 *   **Strategy**: Detect Golden Cross (MA50 > MA200) or Death Cross. Use Fibonacci to determine major yearly support zones.
 
@@ -70,7 +72,7 @@ When invoked, provide a clean, algorithmic technical report without hallucinatin
 - **Resistance (Take Profit)**: (e.g. Fibo 0.236 at Rp Y, or Ext 1.618)
 - **Stop Loss**: (Where the structure breaks)
 
-## 4. Technical Conclusion & Quant Score (0-20)
-- **Score (0-20)**: (Assign a score out of 20 to be passed back to the Master Orchestrator. 20 means perfect golden cross + cheap RSI + bouncing off Fibo 0.618).
+## 4. Technical Conclusion & Momentum Score (0-20)
+- **Technical Momentum Score (0-20)**: Pass this to the Master Orchestrator for the **Technical Momentum (20%)** component of the Master Quant Score. 20 = strong bullish structure (golden cross, RSI healthy, price above VWAP, bullish SMC).
 - **Actionable Verdict**: (e.g. Wait for pullback to Fibo 0.618, or Buy on Breakout).
 ```

@@ -29,6 +29,94 @@ class StockbitClient {
       "Origin": "https://stockbit.com",
       "Referer": "https://stockbit.com/"
     };
+
+    this._responseCache = new Map();
+    const envTtl = Number(process.env.STOCKBIT_CACHE_TTL_MS);
+    this._cacheTtlMs = Number.isFinite(envTtl) && envTtl >= 0 ? envTtl : 30_000;
+    this._cacheEnabled = this._cacheTtlMs > 0;
+    this._maxRetries = 3;
+    this._retryBaseMs = 500;
+  }
+
+  clearCache() {
+    this._responseCache.clear();
+  }
+
+  getCacheStats() {
+    const now = Date.now();
+    let active = 0;
+    for (const entry of this._responseCache.values()) {
+      if (entry.expiresAt > now) active += 1;
+    }
+    return {
+      enabled: this._cacheEnabled,
+      ttlMs: this._cacheTtlMs,
+      entries: this._responseCache.size,
+      activeEntries: active,
+    };
+  }
+
+  _cacheKey(method, url) {
+    return `${method}:${url}`;
+  }
+
+  _getCached(key) {
+    const entry = this._responseCache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this._responseCache.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  _setCache(key, data) {
+    this._responseCache.set(key, { data, expiresAt: Date.now() + this._cacheTtlMs });
+  }
+
+  _retryDelayMs(attempt, status) {
+    const base = status === 429 ? this._retryBaseMs * 4 : this._retryBaseMs;
+    return base * Math.pow(2, attempt);
+  }
+
+  async _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async _fetchWithRetry(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const cacheKey = this._cacheKey(method, url);
+
+    if (method === 'GET' && this._cacheEnabled) {
+      const cached = this._getCached(cacheKey);
+      if (cached) return cached;
+    }
+
+    let lastError;
+    for (let attempt = 0; attempt < this._maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        if (response.status === 429 || response.status >= 500) {
+          if (attempt < this._maxRetries - 1) {
+            await this._sleep(this._retryDelayMs(attempt, response.status));
+            continue;
+          }
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+        const json = await response.json();
+        if (method === 'GET' && this._cacheEnabled) this._setCache(cacheKey, json);
+        return json;
+      } catch (err) {
+        lastError = err;
+        if (attempt < this._maxRetries - 1) {
+          await this._sleep(this._retryDelayMs(attempt));
+        }
+      }
+    }
+    throw lastError || new Error('Request failed after retries');
   }
 
   _isExpired(isoDateString) {
@@ -181,22 +269,18 @@ Paste it into: ${path.resolve(this.tokenFile)}`;
         url.searchParams.append(key, params[key]);
       }
     });
-    const response = await fetch(url.toString(), { headers: this.headers });
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    return response.json();
+    return this._fetchWithRetry(url.toString(), { method: 'GET', headers: this.headers });
   }
 
   async _postExodus(endpoint, payload = {}) {
     if (!this.accessToken || this._isExpired(this.accessExpiredAt)) {
       await this.login();
     }
-    const response = await fetch(`${this.exodusUrl}${endpoint}`, {
+    return this._fetchWithRetry(`${this.exodusUrl}${endpoint}`, {
       method: 'POST',
       headers: this.headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    return response.json();
   }
 
   async getProfile() {

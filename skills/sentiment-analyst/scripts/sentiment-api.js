@@ -1,14 +1,15 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
+const { RULE_OF_FIVE, clampLimit } = require('../../../core/rule-of-five.js');
 
 class SentimentAPIClient extends StockbitClient {
   /**
    * Fetch stream data for a symbol.
    * Categories: STREAM_CATEGORY_NEWS, STREAM_CATEGORY_REPORTS, STREAM_CATEGORY_INSIDER
    */
-  async getStream(ticker, category = 'STREAM_CATEGORY_NEWS', limit = 10) {
+  async getStream(ticker, category = 'STREAM_CATEGORY_NEWS', limit = RULE_OF_FIVE) {
     const params = {
       category,
-      limit
+      limit: clampLimit(limit)
     };
     const response = await this._getExodus(`/stream/v3/symbol/${ticker}`, params);
     
@@ -29,10 +30,10 @@ class SentimentAPIClient extends StockbitClient {
 
   async getAggregatedSentiment(ticker) {
     // Fetch multiple categories and combine them
-    const news = await this.getStream(ticker, 'STREAM_CATEGORY_NEWS', 10);
-    const reports = await this.getStream(ticker, 'STREAM_CATEGORY_REPORTS', 5);
-    const insider = await this.getStream(ticker, 'STREAM_CATEGORY_INSIDER', 5);
-    const ideas = await this.getStream(ticker, 'STREAM_CATEGORY_IDEAS', 10);
+    const news = await this.getStream(ticker, 'STREAM_CATEGORY_NEWS', RULE_OF_FIVE);
+    const reports = await this.getStream(ticker, 'STREAM_CATEGORY_REPORTS', RULE_OF_FIVE);
+    const insider = await this.getStream(ticker, 'STREAM_CATEGORY_INSIDER', RULE_OF_FIVE);
+    const ideas = await this.getStream(ticker, 'STREAM_CATEGORY_IDEAS', RULE_OF_FIVE);
     
     return {
       news,
@@ -46,11 +47,11 @@ class SentimentAPIClient extends StockbitClient {
    * Fetch breaking news / macro data / midday data from the Official @Stockbit account.
    * If ticker is provided, filters for posts containing that ticker.
    */
-  async getOfficialStockbitNews(limit = 10, ticker = null) {
+  async getOfficialStockbitNews(limit = RULE_OF_FIVE, ticker = null) {
     const payload = {
       category: 'STREAM_CATEGORY_MAIN_IDEAS',
       last_stream_id: 0,
-      limit: 25 // Fetch more initially to allow filtering
+      limit: 25 // Internal fetch buffer — output trimmed to Rule of 5 below
     };
     
     // Using POST to the specific user stream endpoint for cleaner results
@@ -71,7 +72,7 @@ class SentimentAPIClient extends StockbitClient {
       return true; // If macro mode (no ticker), return all
     });
 
-    return posts.slice(0, limit).map(post => {
+    return posts.slice(0, clampLimit(limit)).map(post => {
       return {
         id: post.stream_id,
         date: post.created_display,
@@ -84,18 +85,67 @@ class SentimentAPIClient extends StockbitClient {
   }
 }
 
-if (require.main === module) {
-  (async () => {
-    const api = new SentimentAPIClient();
-    try {
-      await api.login();
-      const ticker = process.argv[2] || 'BBCA';
-      const data = await api.getAggregatedSentiment(ticker);
-      console.log(`Sentiment Data for ${ticker}:`, JSON.stringify(data, null, 2));
-    } catch (e) {
-      console.error(e.message);
-    }
-  })();
+const SENT_CLI_COMMANDS = [
+  { usage: 'aggregate <TICKER>', detail: 'News, reports, insider, and retail ideas (Rule of 5 each)' },
+  { usage: 'official [TICKER|MACRO] [LIMIT]', detail: 'Official @Stockbit stream. Use MACRO for market-wide macro/midday PDF' },
+  { usage: 'stream <TICKER> [CATEGORY] [LIMIT]', detail: 'Single stream category (NEWS, REPORTS, INSIDER, IDEAS)' },
+];
+
+function printSentimentHelp() {
+  const { printHelp } = require('../../../core/cli-help.js');
+  printHelp('sentiment-api.js', 'Sentiment, news & catalyst API', SENT_CLI_COMMANDS);
 }
 
-module.exports = { SentimentAPIClient };
+const STREAM_CATEGORIES = {
+  NEWS: 'STREAM_CATEGORY_NEWS',
+  REPORTS: 'STREAM_CATEGORY_REPORTS',
+  INSIDER: 'STREAM_CATEGORY_INSIDER',
+  IDEAS: 'STREAM_CATEGORY_IDEAS',
+};
+
+async function runSentimentCLI(argv) {
+  const { wantsHelp } = require('../../../core/cli-help.js');
+  if (wantsHelp(argv) || argv.length === 0) {
+    printSentimentHelp();
+    process.exit(argv.length === 0 ? 1 : 0);
+  }
+
+  const api = new SentimentAPIClient();
+  await api.login();
+
+  const [command, arg1, arg2, arg3] = argv;
+
+  switch (command) {
+    case 'aggregate': {
+      const ticker = arg1 || 'BBCA';
+      console.log(JSON.stringify(await api.getAggregatedSentiment(ticker), null, 2));
+      break;
+    }
+    case 'official': {
+      const ticker = arg1 && arg1 !== 'MACRO' ? arg1 : null;
+      const limit = arg2 ? parseInt(arg2, 10) : undefined;
+      console.log(JSON.stringify(await api.getOfficialStockbitNews(limit, ticker), null, 2));
+      break;
+    }
+    case 'stream': {
+      const ticker = arg1;
+      if (!ticker) throw new Error('Usage: sentiment-api.js stream <TICKER> [CATEGORY] [LIMIT]');
+      const catKey = (arg2 || 'NEWS').toUpperCase();
+      const category = STREAM_CATEGORIES[catKey] || arg2;
+      const limit = arg3 ? parseInt(arg3, 10) : undefined;
+      console.log(JSON.stringify(await api.getStream(ticker, category, limit), null, 2));
+      break;
+    }
+    default:
+      throw new Error(`Unknown command: ${command}. Run with --help.`);
+  }
+}
+
+if (require.main === module) {
+  runSentimentCLI(process.argv.slice(2)).catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { SentimentAPIClient, printSentimentHelp };

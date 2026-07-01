@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "description": "Master Quant Score (360° Evaluation) — canonical weights from institutional-analyst final report",
+    "version": "2.1"
+  },
+  "engines": [
+    {
+      "id": "technical",
+      "label": "Technical Momentum",
+      "weightPct": 20,
+      "maxScore": 20,
+      "source": "technical-analyst"
+    },
+    {
+      "id": "fundamental",
+      "label": "Fundamental & Value",
+      "weightPct": 20,
+      "maxScore": 20,
+      "source": "fundamental-analyst"
+    },
+    {
+      "id": "sentiment",
+      "label": "Catalyst & Sentiment",
+      "weightPct": 20,
+      "maxScore": 20,
+      "source": "sentiment-analyst"
+    },
+    {
+      "id": "bandarmologi",
+      "label": "Bandarmologi Flow",
+      "weightPct": 40,
+      "maxScore": 40,
+      "source": "institutional-analyst"
+    }
+  ],
+  "ratings": [
+    { "rating": "STRONG BUY", "minScore": 80 },
+    { "rating": "BUY", "minScore": 65 },
+    { "rating": "HOLD", "minScore": 45 },
+    { "rating": "SELL", "minScore": 30 },
+    { "rating": "STRONG SELL", "minScore": 0 }
+  ]
+}

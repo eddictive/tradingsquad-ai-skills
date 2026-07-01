@@ -22,16 +22,30 @@ class FundamentalAPIClient extends StockbitClient {
   }
 }
 
-if (require.main === module) {
-  (async () => {
-    const api = new FundamentalAPIClient();
-    try {
-      await api.login();
-      
-      const action = process.argv[2] || "keystats";
-      const ticker = process.argv[3] || "BBCA";
-      
-      if (action === "keystats") {
+const FUND_CLI_COMMANDS = [
+  { usage: 'keystats <TICKER>', detail: 'Valuation ratios (PE, PBV, ROE, DER, FCF, etc.)' },
+  { usage: 'report <TICKER> [REPORT_TYPE] [STATEMENT_TYPE]', detail: 'Financial report. Types: 1=Income, 2=Balance, 3=Cash Flow' },
+];
+
+function printFundamentalHelp() {
+  const { printHelp } = require('../../../core/cli-help.js');
+  printHelp('fundamental-api.js', 'Fundamental valuation & financial reports API', FUND_CLI_COMMANDS);
+}
+
+async function runFundamentalCLI(argv) {
+  const { wantsHelp } = require('../../../core/cli-help.js');
+  if (wantsHelp(argv) || argv.length === 0) {
+    printFundamentalHelp();
+    process.exit(argv.length === 0 ? 1 : 0);
+  }
+
+  const api = new FundamentalAPIClient();
+  await api.login();
+
+  const action = argv[0] || 'keystats';
+  const ticker = argv[1] || 'BBCA';
+
+  if (action === 'keystats') {
         const data = await api.getKeyStats(ticker, 10);
         
         let results = {};
@@ -55,18 +69,23 @@ if (require.main === module) {
            });
         }
         
-        console.log(`KeyStats [${ticker}]:`, JSON.stringify(results, null, 2));
-      } else if (action === "report") {
-        const reportType = parseInt(process.argv[4] || "1", 10);
-        const statementType = parseInt(process.argv[5] || "2", 10);
-        const data = await api.getFinancialReport(ticker, reportType, statementType);
-        // Truncate deeply nested stuff for CLI
-        if(data.report && data.report.length > 5) data.report = data.report.slice(0, 5); 
-        console.log(`Financial Report [${ticker}]:`, JSON.stringify(data, null, 2));
-      }
-    } catch (e) {
-      console.error(e.message);
-    }
-  })();
+    console.log(JSON.stringify(results, null, 2));
+  } else if (action === 'report') {
+    const reportType = parseInt(argv[2] || '1', 10);
+    const statementType = parseInt(argv[3] || '2', 10);
+    const data = await api.getFinancialReport(ticker, reportType, statementType);
+    if (data.report && data.report.length > 5) data.report = data.report.slice(0, 5);
+    console.log(JSON.stringify(data, null, 2));
+  } else {
+    throw new Error(`Unknown command: ${action}. Run with --help.`);
+  }
 }
-module.exports = { FundamentalAPIClient };
+
+if (require.main === module) {
+  runFundamentalCLI(process.argv.slice(2)).catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { FundamentalAPIClient, printFundamentalHelp };

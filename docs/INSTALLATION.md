@@ -29,6 +29,13 @@ Stockbit heavily protects its login endpoints. To bypass CAPTCHAs and bot protec
 
 *(Note: Do not worry if the copied text is URL-encoded. The internal API Client will automatically intercept it on the first run, extract both the `access_token` and `refresh_token`, and cleanly format the file to support Auto-Rotation!)*
 
+### Token Security (Important)
+- **Never commit** `.stockbit_token.json` — it is in `.gitignore` and excluded from the npm package.
+- The installer **never overwrites** an existing token file; it only warns that credentials are present.
+- If a token is leaked, **log out of Stockbit**, clear browser cookies, log in again, and paste a fresh `credentialStorage` value.
+- Do not share token files in chat, screenshots, or public repos.
+- Optional: set `STOCKBIT_CACHE_TTL_MS=0` in `.env` to disable in-memory GET caching for sensitive sessions.
+
 ---
 
 ## 2. Automated Installer
@@ -58,6 +65,12 @@ bun scripts/install-skills.js
 
 # Silent setup for all CLIs locally
 bun scripts/install-skills.js --local --all
+
+# Post-install verification (trading-day-check + auth smoke)
+node scripts/install-skills.js --verify
+
+# Pin a release tag when fetching remotely
+node scripts/install-skills.js --local --all --tag v1.0.0
 ```
 
 ---

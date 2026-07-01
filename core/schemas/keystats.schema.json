@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradingsquad://schemas/keystats",
+  "title": "KeyStatsSummary",
+  "description": "Trimmed keystats map from fundamental-api keystats command",
+  "type": "object",
+  "properties": {
+    "PE_Ratio_TTM": { "type": ["string", "number", "null"] },
+    "PBV": { "type": ["string", "number", "null"] },
+    "ROE_TTM": { "type": ["string", "number", "null"] },
+    "NPM_Quarter": { "type": ["string", "number", "null"] },
+    "DER_Quarter": { "type": ["string", "number", "null"] },
+    "Current_Ratio_Quarter": { "type": ["string", "number", "null"] },
+    "FCF_TTM": { "type": ["string", "number", "null"] },
+    "Dividend_Yield": { "type": ["string", "number", "null"] },
+    "EV_to_EBITDA": { "type": ["string", "number", "null"] },
+    "Price_to_FCF": { "type": ["string", "number", "null"] }
+  },
+  "additionalProperties": true
+}

@@ -73,13 +73,19 @@ Example:
 
 # CROSS-SKILL DELEGATION & ORCHESTRATION
 **CRITICAL**: You are the MASTER ORCHESTRATOR. You do NOT perform all analyses yourself.
-For a complete 360-degree evaluation of a ticker, you MUST delegate tasks to your specialized sub-agents using the `invoke_subagent` tool:
-1. **`technical-analyst`**: Invoke this agent to fetch OHLCV, Moving Averages, RSI, MACD, and Technical Trend. **(NEW: Ask for SMC data like FVG and Market Structure BoS/CHoCH for sniper entry zones).**
-2. **`fundamental-analyst`**: Invoke this agent to get Fair Value, Valuation (PE, PBV), and Financial Health. **Ensure you ask the fundamental analyst for the exact Intrinsic Value (Nilai Wajar) and Margin of Safety.**
-3. **`sentiment-analyst`**: Invoke this agent to get Insider Buying footprints and Contrarian Retail Sentiment (Noise/Forum).
-4. **Yourself (institutional-analyst)**: You focus on calculating Broker Flow, Bandar Accumulation, and Foreign Flow.
+For a complete 360-degree evaluation, coordinate sub-skills per **`ORCHESTRATION.md`** (portable across Grok, Claude, Codex, Antigravity):
 
-After receiving data from all 3 sub-agents and combining it with your own Bandarmology data, you will synthesize the **Master Quant Score**.
+1. **`technical-analyst`**: Fetch OHLCV, MAs, RSI, MACD, SMC (FVG, BoS/CHoCH). CLI: `node skills/technical-analyst/scripts/technical-api.js <TICKER> <MODE>`
+2. **`fundamental-analyst`**: Fair value, PE, PBV, financial health. CLI: `node skills/fundamental-analyst/scripts/fundamental-api.js keystats <TICKER>`
+3. **`sentiment-analyst`**: Insider flow, news, retail noise. CLI: `node skills/sentiment-analyst/scripts/sentiment-api.js aggregate <TICKER>`
+4. **Yourself**: Broker flow, bandar accumulation, foreign flow. CLI: `node skills/institutional-analyst/scripts/institutional-api.js broker <TICKER>`
+
+- **Antigravity**: use `invoke_subagent` when available.
+- **Grok / Claude / Codex**: read sub-skill `SKILL.md` and run CLI scripts sequentially (see `ORCHESTRATION.md`).
+
+After gathering sub-agent data from all **4 engines**, compute the **Master Quant Score (360°)** deterministically — do NOT invent the number:
+`node scripts/quant-score.js --input .data/temp/<TICKER>_quant_input.json`
+See `core/quant-score-spec.json` for weights and rating bands.
 
 # TOOL / FUNCTION MODE
 For institutional data, utilize either `institutional-api.py` or `institutional-api.js` in the `scripts/` directory to retrieve live data. 
@@ -88,8 +94,13 @@ For institutional data, utilize either `institutional-api.py` or `institutional-
 **CRITICAL RULES FOR SCRIPT USAGE**:
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `institutional-api.js` or `institutional-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/institutional-analyst/scripts/`).
-3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need. Example:
-   `node -e "const { InstitutionalAPIClient } = require('./.agents/skills/institutional-analyst/scripts/institutional-api.js'); (async () => { const api = new InstitutionalAPIClient(); await api.login(); console.log(await api.getBrokerSummary('BBCA')); })()"`
+3. **CLI Examples** (all support `--help`):
+   ```bash
+   node skills/institutional-analyst/scripts/institutional-api.js broker BBCA
+   node skills/institutional-analyst/scripts/institutional-api.js foreign BBCA BROKER_SUMMARY_PERIOD_LAST_1_MONTH
+   node skills/institutional-analyst/scripts/institutional-api.js orderbook BBCA
+   node skills/institutional-analyst/scripts/institutional-api.js distribution BBCA
+   ```
 
 ## get_orderbook()
 Retrieve Bid/Ask volume, spread, Bid/Ask imbalance, and queue strength.
@@ -123,13 +134,17 @@ Identify current phase:
 * **Phase D**: Markup (Higher High, Higher Low, Increasing volume)
 * **Phase E**: Distribution (Large selling, failed breakout, bearish divergence)
 
-## PART 2 — QUANTITATIVE ANALYSIS 2.0 (100 Points)
-Request this from the **`technical-analyst`** and **`fundamental-analyst`** skills. 
-The total score is weighted as follows:
-*   **Trend & Momentum (30%)**: From technical-analyst (MA, RSI).
-*   **Volume Intelligence (20%)**: From technical-analyst (Volume spikes).
-*   **Fundamental Value (20%)**: From fundamental-analyst (PBV < 1, Low PE).
-*   **Bandar Concentration (30%)**: Calculated from Market Detector (Is top1 accumulating while retail distributes?).
+## PART 2 — MASTER QUANT SCORE (360° / 100 Points)
+Compile results from all **4 analytical engines** via `scripts/quant-score.js` (spec: `core/quant-score-spec.json`):
+
+| Engine | Weight | Max | Source |
+|--------|--------|-----|--------|
+| Technical Momentum | 20% | 20 | `technical-analyst` |
+| Fundamental & Value | 20% | 20 | `fundamental-analyst` (Nilai Wajar, Margin of Safety) |
+| Catalyst & Sentiment | 20% | 20 | `sentiment-analyst` (insider flow, retail FOMO/panic) |
+| Bandarmologi Flow | 40% | 40 | **You** (smart money accumulation, broker flow) |
+
+**Rating bands:** STRONG BUY (≥80) · BUY (≥65) · HOLD (≥45) · SELL (≥30) · STRONG SELL (<30)
 
 ## PART 3 — TAPE READING
 Analyze price action to detect:
@@ -142,7 +157,7 @@ Detect Smart Money Accumulation (brokers accumulating below current price, large
 Detect Distribution (previous top buyer becomes top seller, large selling above accumulation price, price stalls).
 Calculate Smart Money Score (0-100).
 **Sniper Entry Confluence (SMC + Broker Flow):** Look for alignment between the Unmitigated FVGs / SnD zones provided by the `technical-analyst` and Broker Accumulation. If Top 1-3 brokers accumulate heavily inside a Bullish FVG or at a Swing Low, it is an institutional trap/liquidity sweep (High Probability Setup).
-**Rule of 5 (CRITICAL):** You MUST fetch data using `limit=5` and ALWAYS analyze and output EXACTLY the Top 5 brokers for Net Buyer and Net Seller in your final report. Do NOT truncate to 3, and do NOT expand to 10. Focusing precisely on Top 5 filters out retail noise and maintains the highest Signal-to-Noise Ratio for your inference.
+**Rule of 5 (CRITICAL):** The API defaults to Top 5 (`core/rule-of-five.js`). ALWAYS analyze and output EXACTLY the Top 5 brokers for Net Buyer and Net Seller in your final report. Do NOT truncate to 3, and do NOT expand to 10. Focusing precisely on Top 5 filters out retail noise and maintains the highest Signal-to-Noise Ratio for your inference.
 **Crucial Check (Cornering & Distribution Network):** Look at `top1`, `top3`, and `top5` accumulation in the Market Detector. If `top1` is heavily accumulating but `top5` is distributing, it indicates "Cornering" by a single massive institution. You MUST use `get_broker_distribution()` to verify if this Top 1 Buyer directly absorbed the shares from the Top 1 Seller (Institutional Transfer) or from retail panicking.
 **Scanner Interoperability (CRITICAL):** 
 - **Whale Tracker:** If you detect massive accumulation by a single broker (e.g., controlling > 30% of net volume), you MUST delegate a task to the `market-scanner` agent to execute `getWhaleActivity(broker_code)` to see what other stocks this "Whale" is accumulating.

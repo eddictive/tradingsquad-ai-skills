@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install (no deps)
+        run: node -v && npm -v
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Holiday calendar check
+        run: node scripts/check-holiday-calendar.js
+
+      - name: Version sync (when tags exist)
+        run: node scripts/sync-version.js
+        continue-on-error: true

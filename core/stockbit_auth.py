@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import sys
+import time
 from datetime import datetime
 
 class StockbitClient:
@@ -36,6 +37,79 @@ class StockbitClient:
             "Origin": "https://stockbit.com",
             "Referer": "https://stockbit.com/"
         })
+
+        self._response_cache = {}
+        env_ttl = os.environ.get("STOCKBIT_CACHE_TTL_MS")
+        try:
+            ttl_ms = int(env_ttl) if env_ttl is not None else 30_000
+        except ValueError:
+            ttl_ms = 30_000
+        self._cache_ttl_sec = max(0, ttl_ms) / 1000.0
+        self._cache_enabled = self._cache_ttl_sec > 0
+        self._max_retries = 3
+        self._retry_base_sec = 0.5
+
+    def clear_cache(self):
+        self._response_cache.clear()
+
+    def get_cache_stats(self):
+        now = time.time()
+        active = sum(1 for e in self._response_cache.values() if e["expires_at"] > now)
+        return {
+            "enabled": self._cache_enabled,
+            "ttlMs": int(self._cache_ttl_sec * 1000),
+            "entries": len(self._response_cache),
+            "activeEntries": active,
+        }
+
+    def _cache_key(self, method, url):
+        return f"{method}:{url}"
+
+    def _get_cached(self, key):
+        entry = self._response_cache.get(key)
+        if not entry:
+            return None
+        if time.time() > entry["expires_at"]:
+            del self._response_cache[key]
+            return None
+        return entry["data"]
+
+    def _set_cache(self, key, data):
+        self._response_cache[key] = {
+            "data": data,
+            "expires_at": time.time() + self._cache_ttl_sec,
+        }
+
+    def _retry_delay(self, attempt, status=None):
+        base = self._retry_base_sec * 4 if status == 429 else self._retry_base_sec
+        return base * (2 ** attempt)
+
+    def _request_with_retry(self, method, url, **kwargs):
+        cache_key = self._cache_key(method, url)
+        if method.upper() == "GET" and self._cache_enabled:
+            cached = self._get_cached(cache_key)
+            if cached is not None:
+                return cached
+
+        last_error = None
+        for attempt in range(self._max_retries):
+            try:
+                response = self.session.request(method, url, **kwargs)
+                if response.status_code == 429 or response.status_code >= 500:
+                    if attempt < self._max_retries - 1:
+                        time.sleep(self._retry_delay(attempt, response.status_code))
+                        continue
+                    response.raise_for_status()
+                response.raise_for_status()
+                data = response.json()
+                if method.upper() == "GET" and self._cache_enabled:
+                    self._set_cache(cache_key, data)
+                return data
+            except Exception as e:
+                last_error = e
+                if attempt < self._max_retries - 1:
+                    time.sleep(self._retry_delay(attempt))
+        raise last_error or Exception("Request failed after retries")
 
     def _is_expired(self, iso_date_string):
         if not iso_date_string:
@@ -174,17 +248,13 @@ class StockbitClient:
         if not self.access_token or self._is_expired(self.access_expired_at):
             self.login()
         url = f"{self.exodus_url}{endpoint}"
-        response = self.session.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
+        return self._request_with_retry("GET", url, params=params)
 
     def _post_exodus(self, endpoint, payload=None):
         if not self.access_token or self._is_expired(self.access_expired_at):
             self.login()
         url = f"{self.exodus_url}{endpoint}"
-        response = self.session.post(url, json=payload)
-        response.raise_for_status()
-        return response.json()
+        return self._request_with_retry("POST", url, json=payload)
 
     def get_profile(self):
         username = self.username or os.environ.get("STOCKBIT_USERNAME")

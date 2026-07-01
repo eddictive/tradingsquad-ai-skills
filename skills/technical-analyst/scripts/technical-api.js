@@ -1,4 +1,5 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
+const { filterFromMarketOpen } = require('../../../core/wib.js');
 
 class TechnicalAPIClient extends StockbitClient {
   
@@ -413,10 +414,9 @@ class TechnicalAPIClient extends StockbitClient {
       if (data.length === 0) return { error: "No intraday data found" };
       
       const lastPrice = data[data.length - 1].close;
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayData = data.filter(c => (c.time || c.datetime || '').startsWith(todayStr));
-      const activeData = todayData.length > 0 ? todayData : data;
-      const hl = this._getHighLow(activeData);
+      const activeData = filterFromMarketOpen(data);
+      const sessionData = activeData.length > 0 ? activeData : data;
+      const hl = this._getHighLow(sessionData);
       
       return {
         mode: 'INTRADAY_MTF',
@@ -424,7 +424,7 @@ class TechnicalAPIClient extends StockbitClient {
         lastPrice,
         atr14: this._calcATR(data, 14),
         volumeProfilePOC: this._calcVolumeProfile(data, 10),
-        vwap: this._calcVWAP(activeData),
+        vwap: this._calcVWAP(sessionData),
         ma9: this._calcSMA(data, 9),
         ma21: this._calcSMA(data, 21),
         macd: this._calcMACD(data),
@@ -433,6 +433,7 @@ class TechnicalAPIClient extends StockbitClient {
         SMC_Structural_H1: h1Data.length > 0 ? this._calcSMC(h1Data) : null,
         SMC_Edge_M5: this._calcSMC(data),
         dayHighLow: hl,
+        sessionWindow: '09:00-16:00 WIB',
         fibonacci: this._calcFibonacci(hl.high, hl.low),
         historicalFVGWinRate: dailyData.length > 0 ? this._calcSMCBacktest(dailyData) : null
       };
@@ -443,9 +444,8 @@ class TechnicalAPIClient extends StockbitClient {
       if (data.length === 0) return { error: "No short_swing data found" };
       
       const lastPrice = data[data.length - 1].close;
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayData = data.filter(c => (c.time || c.datetime || '').startsWith(todayStr));
-      const activeData = todayData.length > 0 ? todayData : data.slice(-28);
+      const sessionData = filterFromMarketOpen(data);
+      const activeData = sessionData.length > 0 ? sessionData : data.slice(-28);
       const hl = this._getHighLow(data);
       
       return {
@@ -531,19 +531,45 @@ class TechnicalAPIClient extends StockbitClient {
 }
 
 
-if (require.main === module) {
-  (async () => {
-    const api = new TechnicalAPIClient();
-    try {
-      await api.login();
-      const ticker = process.argv[2] || "BBCA";
-      const mode = process.argv[3] || "swing";
-      const data = await api.getAnalysis(ticker, mode);
-      console.log(`Technical Analysis [${mode.toUpperCase()}] for ${ticker}:`);
-      console.log(JSON.stringify(data, null, 2));
-    } catch (e) {
-      console.error(e.message);
-    }
-  })();
+const TECH_CLI_COMMANDS = [
+  { usage: 'analyze <TICKER> <MODE>', aliases: ['(default)'], detail: 'Modes: intraday, short_swing, swing, longterm (see core/trading-modes.json)' },
+  { usage: '<TICKER> <MODE>', detail: 'Shorthand for analyze (e.g. BBCA short_swing)' },
+];
+
+function printTechnicalHelp() {
+  const { printHelp } = require('../../../core/cli-help.js');
+  printHelp('technical-api.js', 'Context-aware technical analysis API', TECH_CLI_COMMANDS);
 }
-module.exports = { TechnicalAPIClient };
+
+async function runTechnicalCLI(argv) {
+  const { wantsHelp } = require('../../../core/cli-help.js');
+  if (wantsHelp(argv) || argv.length === 0) {
+    printTechnicalHelp();
+    process.exit(argv.length === 0 ? 1 : 0);
+  }
+
+  let ticker, mode;
+  if (argv[0] === 'analyze') {
+    ticker = argv[1];
+    mode = argv[2] || 'swing';
+  } else {
+    ticker = argv[0];
+    mode = argv[1] || 'swing';
+  }
+
+  if (!ticker) throw new Error('Usage: technical-api.js <TICKER> <MODE>');
+
+  const api = new TechnicalAPIClient();
+  await api.login();
+  const data = await api.getAnalysis(ticker, mode);
+  console.log(JSON.stringify(data, null, 2));
+}
+
+if (require.main === module) {
+  runTechnicalCLI(process.argv.slice(2)).catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { TechnicalAPIClient, printTechnicalHelp };

@@ -21,8 +21,11 @@ For financial data, utilize either `fundamental-api.py` or `fundamental-api.js` 
 **CRITICAL RULES FOR SCRIPT USAGE**:
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `fundamental-api.js` or `fundamental-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/fundamental-analyst/scripts/`).
-3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need. Example:
-   `node -e "const { FundamentalAPIClient } = require('./.agents/skills/fundamental-analyst/scripts/fundamental-api.js'); (async () => { const api = new FundamentalAPIClient(); await api.login(); console.log(JSON.stringify(await api.getKeyStats('BBCA', 10))); })()"`
+3. **CLI Examples** (run with `--help`):
+   ```bash
+   node skills/fundamental-analyst/scripts/fundamental-api.js keystats BBCA
+   node skills/fundamental-analyst/scripts/fundamental-api.js report BBCA 1 2
+   ```
 
 ## getKeyStats(ticker)
 Retrieves a massive array of financial ratios. 
@@ -106,5 +109,8 @@ Current Price      : Rp Y.YYY
 Margin of Safety   : ZZ%
 ```
 
-## 4. Fundamental Conclusion
+## 4. Fundamental & Value Score (0-20)
+- **Fundamental Score (0-20)**: Pass to the Master Orchestrator for the **Fundamental & Value (20%)** component. Include **Fair Value (Nilai Wajar)** and **Margin of Safety %** — these are echoed in the final Master Quant Score block.
+
+## 5. Fundamental Conclusion
 (Provide a brief conclusion on whether the stock is fundamentally sound and worth holding long-term. If it's a Deep Value stock being accumulated by foreign/institutional money, highlight this!).

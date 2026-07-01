@@ -25,15 +25,33 @@ class FundamentalAPIClient(StockbitClient):
         res = self._get_exodus("/findata-view/company/financial", params=params)
         return res.get("data", {})
 
+FUND_CLI_COMMANDS = [
+    {"usage": "keystats <TICKER>", "detail": "Valuation ratios (PE, PBV, ROE, DER, FCF, etc.)"},
+    {"usage": "report <TICKER> [REPORT_TYPE] [STATEMENT_TYPE]", "detail": "Financial report. Types: 1=Income, 2=Balance, 3=Cash Flow"},
+]
+
+
+def print_fundamental_help():
+    from cli_help import print_help
+    print_help("fundamental-api.py", "Fundamental valuation & financial reports API", FUND_CLI_COMMANDS)
+
+
 if __name__ == "__main__":
     import json
+    from cli_help import wants_help
+
+    argv = sys.argv[1:]
+    if wants_help(argv) or not argv:
+        print_fundamental_help()
+        sys.exit(1 if not argv else 0)
+
     api = FundamentalAPIClient()
     try:
         api.login()
-        
-        action = sys.argv[1] if len(sys.argv) > 1 else "keystats"
-        ticker = sys.argv[2] if len(sys.argv) > 2 else "BBCA"
-        
+
+        action = argv[0]
+        ticker = argv[1] if len(argv) > 1 else "BBCA"
+
         if action == "keystats":
             data = api.get_keystats(ticker, 10)
             results = {}
@@ -54,15 +72,18 @@ if __name__ == "__main__":
                     if "EV to EBITDA (TTM)" in name: results["EV_to_EBITDA"] = val
                     if "Current Price To Free Cashflow" in name: results["Price_to_FCF"] = val
                         
-            print(f"KeyStats [{ticker}]:\n{json.dumps(results, indent=2)}")
-            
+            print(json.dumps(results, indent=2))
+
         elif action == "report":
-            report_type = int(sys.argv[3]) if len(sys.argv) > 3 else 1
-            statement_type = int(sys.argv[4]) if len(sys.argv) > 4 else 2
+            report_type = int(argv[2]) if len(argv) > 2 else 1
+            statement_type = int(argv[3]) if len(argv) > 3 else 2
             data = api.get_financial_report(ticker, report_type, statement_type)
             if "report" in data and len(data["report"]) > 5:
                 data["report"] = data["report"][:5]
-            print(f"Financial Report [{ticker}]:\n{json.dumps(data, indent=2)}")
-            
+            print(json.dumps(data, indent=2))
+        else:
+            raise ValueError(f"Unknown command: {action}. Run with --help.")
+
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

@@ -5,13 +5,14 @@ import json
 # Import the Shared Core Authentication Module
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../core'))
 from stockbit_auth import StockbitClient
+from rule_of_five import RULE_OF_FIVE, clamp_limit
 
 class SentimentAPIClient(StockbitClient):
     """
     Market Sentiment API Client.
     Fetches news, corporate reports, and insider activities.
     """
-    def get_stream(self, ticker, category="STREAM_CATEGORY_NEWS", limit=10):
+    def get_stream(self, ticker, category="STREAM_CATEGORY_NEWS", limit=RULE_OF_FIVE):
         params = {
             "category": category,
             "limit": limit
@@ -33,10 +34,10 @@ class SentimentAPIClient(StockbitClient):
         return results
 
     def get_aggregated_sentiment(self, ticker):
-        news = self.get_stream(ticker, "STREAM_CATEGORY_NEWS", 10)
-        reports = self.get_stream(ticker, "STREAM_CATEGORY_REPORTS", 5)
-        insider = self.get_stream(ticker, "STREAM_CATEGORY_INSIDER", 5)
-        ideas = self.get_stream(ticker, "STREAM_CATEGORY_IDEAS", 10)
+        news = self.get_stream(ticker, "STREAM_CATEGORY_NEWS", RULE_OF_FIVE)
+        reports = self.get_stream(ticker, "STREAM_CATEGORY_REPORTS", RULE_OF_FIVE)
+        insider = self.get_stream(ticker, "STREAM_CATEGORY_INSIDER", RULE_OF_FIVE)
+        ideas = self.get_stream(ticker, "STREAM_CATEGORY_IDEAS", RULE_OF_FIVE)
         
         return {
             "news": news,
@@ -45,11 +46,11 @@ class SentimentAPIClient(StockbitClient):
             "ideas": ideas
         }
 
-    def get_official_stockbit_news(self, limit=10, ticker=None):
+    def get_official_stockbit_news(self, limit=RULE_OF_FIVE, ticker=None):
         payload = {
             "category": "STREAM_CATEGORY_MAIN_IDEAS",
             "last_stream_id": 0,
-            "limit": 25
+            "limit": 25  # Internal fetch buffer — output trimmed to Rule of 5 below
         }
         response = self._post_exodus("/stream/v3/user/Stockbit", payload=payload)
         data_list = response.get("data", {}).get("stream", [])
@@ -70,7 +71,7 @@ class SentimentAPIClient(StockbitClient):
             filtered_posts.append(post)
             
         results = []
-        for post in filtered_posts[:limit]:
+        for post in filtered_posts[:clamp_limit(limit)]:
             reaction = post.get("reaction", {})
             total_likes = reaction.get("total", 0) if reaction.get("reactions") else 0
             results.append({
@@ -83,20 +84,59 @@ class SentimentAPIClient(StockbitClient):
             })
         return results
 
+SENT_CLI_COMMANDS = [
+    {"usage": "aggregate <TICKER>", "detail": "News, reports, insider, and retail ideas (Rule of 5 each)"},
+    {"usage": "official [TICKER|MACRO] [LIMIT]", "detail": "Official @Stockbit stream. Use MACRO for market-wide macro/midday PDF"},
+    {"usage": "stream <TICKER> [CATEGORY] [LIMIT]", "detail": "Single stream category (NEWS, REPORTS, INSIDER, IDEAS)"},
+]
+
+STREAM_CATEGORIES = {
+    "NEWS": "STREAM_CATEGORY_NEWS",
+    "REPORTS": "STREAM_CATEGORY_REPORTS",
+    "INSIDER": "STREAM_CATEGORY_INSIDER",
+    "IDEAS": "STREAM_CATEGORY_IDEAS",
+}
+
+
+def print_sentiment_help():
+    from cli_help import print_help
+    print_help("sentiment-api.py", "Sentiment, news & catalyst API", SENT_CLI_COMMANDS)
+
+
 if __name__ == "__main__":
+    from cli_help import wants_help
+
+    argv = sys.argv[1:]
+    if wants_help(argv) or not argv:
+        print_sentiment_help()
+        sys.exit(1 if not argv else 0)
+
     api = SentimentAPIClient()
     api.login()
-    
-    action = sys.argv[1] if len(sys.argv) > 1 else "aggregate"
-    
-    if action == "official":
-        tkr = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] != "MACRO" else None
-        limit = int(sys.argv[3]) if len(sys.argv) > 3 else 10
-        data = api.get_official_stockbit_news(limit, tkr)
-        print("Official Stockbit News:")
-        print(json.dumps(data, indent=2))
-    else:
-        ticker = sys.argv[1] if len(sys.argv) > 1 else "BBCA"
-        data = api.get_aggregated_sentiment(ticker)
-        print(f"Sentiment Data for {ticker}:")
-        print(json.dumps(data, indent=2))
+
+    action = argv[0]
+
+    try:
+        if action == "official":
+            tkr = argv[1] if len(argv) > 1 and argv[1] != "MACRO" else None
+            limit = int(argv[2]) if len(argv) > 2 else None
+            data = api.get_official_stockbit_news(limit, tkr)
+            print(json.dumps(data, indent=2))
+        elif action == "aggregate":
+            ticker = argv[1] if len(argv) > 1 else "BBCA"
+            data = api.get_aggregated_sentiment(ticker)
+            print(json.dumps(data, indent=2))
+        elif action == "stream":
+            ticker = argv[1] if len(argv) > 1 else None
+            if not ticker:
+                raise ValueError("Usage: sentiment-api.py stream <TICKER> [CATEGORY] [LIMIT]")
+            cat_key = (argv[2] if len(argv) > 2 else "NEWS").upper()
+            category = STREAM_CATEGORIES.get(cat_key, argv[2] if len(argv) > 2 else "STREAM_CATEGORY_NEWS")
+            limit = int(argv[3]) if len(argv) > 3 else None
+            data = api.get_stream(ticker, category, limit)
+            print(json.dumps(data, indent=2))
+        else:
+            raise ValueError(f"Unknown command: {action}. Run with --help.")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

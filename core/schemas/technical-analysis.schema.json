@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradingsquad://schemas/technical-analysis",
+  "title": "TechnicalAnalysisOutput",
+  "description": "Normalized output from technical-api getAnalysis()",
+  "type": "object",
+  "oneOf": [
+    { "required": ["error"], "properties": { "error": { "type": "string" } } },
+    {
+      "required": ["mode", "timeframe", "lastPrice"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["INTRADAY_MTF", "SHORT_SWING_MTF", "SWING_MTF", "LONGTERM_MTF"]
+        },
+        "timeframe": { "type": "string" },
+        "lastPrice": { "type": "number" },
+        "atr14": { "type": ["number", "null"] },
+        "vwap": { "type": ["number", "null"] },
+        "rsi14": { "type": ["number", "null"] },
+        "sessionWindow": { "type": "string" },
+        "fibonacci": { "type": "object" },
+        "historicalFVGWinRate": { "type": ["object", "null"] }
+      }
+    }
+  ]
+}

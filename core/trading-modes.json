@@ -1,0 +1,60 @@
+{
+  "_meta": {
+    "description": "Canonical trading mode mapping for TradingSquad AI skills and API scripts.",
+    "note": "Single source of truth — referenced by AGENTS.md, docs/USER_GUIDE.md, and SKILL.md files."
+  },
+  "modes": [
+    {
+      "id": "intraday",
+      "label": "Intraday / Scalping",
+      "timeframe": "1-3 days",
+      "technical_api_mode": "intraday",
+      "broker_summary_period": "5D",
+      "context": "VWAP, 1H/15m timeframe, fast momentum, live tape reading",
+      "example_prompts": [
+        "Analisis ADRO untuk scalping hari ini",
+        "Cek momentum BBCA buat day trade",
+        "Apakah BREN kuat naik sampai penutupan sesi 2?"
+      ]
+    },
+    {
+      "id": "short_swing",
+      "label": "Short Swing",
+      "timeframe": "1-3 weeks",
+      "technical_api_mode": "short_swing",
+      "broker_summary_period": "1M",
+      "context": "Daily (1D) chart, MA10/MA20, short-term accumulation, 15m/1h structure",
+      "example_prompts": [
+        "Analisis swing pendek TINS",
+        "Gimana prospek BUMI buat 2 minggu ke depan?",
+        "Cek bandarmologi GOTO bulan ini."
+      ]
+    },
+    {
+      "id": "swing",
+      "label": "Swing / Medium Term",
+      "timeframe": "1-3 months",
+      "technical_api_mode": "swing",
+      "broker_summary_period": "3M",
+      "context": "Daily/Weekly (1W) chart, MA50, 3-month Fibonacci",
+      "example_prompts": [
+        "Analisis swing medium term AMMN",
+        "Proyeksi harga BRPT 3 bulan ke depan",
+        "Apakah aman hold ASII sampai kuartal depan?"
+      ]
+    },
+    {
+      "id": "longterm",
+      "label": "Long Term / Investing",
+      "timeframe": "6 months - years",
+      "technical_api_mode": "longterm",
+      "broker_summary_period": "6M",
+      "context": "Weekly/Monthly chart, MA200, fundamental fair value, macro trends",
+      "example_prompts": [
+        "Analisis long term BBRI buat nabung saham",
+        "Fundamental check INDF untuk hold 2 tahun",
+        "Proyeksi profitabilitas PTBA FY 2026."
+      ]
+    }
+  ]
+}

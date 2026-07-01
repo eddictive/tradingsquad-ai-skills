@@ -57,8 +57,12 @@ For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scr
 
 **CRITICAL RULES FOR SCRIPT USAGE**:
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
-2. You MUST use the existing `scanner-api.js` or `scanner-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/market-scanner/scripts/`).
-3. **Execution Example**: Use the `run_command` tool to execute a one-liner to fetch what you need.
+2. You MUST use the existing `scanner-api.js` or `scanner-api.py`. Preferred workspace paths:
+   - `node scripts/scanner-api.js [ACTION]` (workspace shim — works after install)
+   - `node skills/market-scanner/scripts/scanner-api.js [ACTION]` (cloned repo)
+   - `node .agents/skills/market-scanner/scripts/scanner-api.js [ACTION]` (Antigravity install)
+3. **Execution Example**: Use the `run_command` tool to execute CLI commands directly.
+4. **Rule of 5**: Scanner outputs are capped at 5 items by default. **Exception:** `tape` (running trade) allows more ticks for velocity analysis.
 
 | Command | Description | Example |
 | :--- | :--- | :--- |
@@ -70,7 +74,7 @@ For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scr
 | `node scripts/scanner-api.js screener [TYPE]` | Runs custom template screener (ACCUMULATION/REBOUND) | `node scripts/scanner-api.js screener ACCUMULATION` |
 | `node scripts/scanner-api.js livedraggers [GROUP]` | Scans specific groups from `core/emitens.json` to find live intraday draggers. If `[GROUP]` is omitted, it defaults to `giants` (Big Caps). Other available groups include `prajogo`, `salim`, `sinarmas`, `saratoga`, `djarum`, `thohir`, `lippo`, `bakrie`, `energi`, and `banking`. | `node scripts/scanner-api.js livedraggers energi` |
 | `node scripts/scanner-api.js detector [TICKER]` | Gets specific symbol detector (Bandar Detector & Broker Summary) | `node scripts/scanner-api.js detector CUAN` |
-| `node scripts/scanner-api.js tape [TICKERS] [LIMIT]` | Tracks the tick-by-tick Running Trade of one or multiple tickers | `node scripts/scanner-api.js tape CUAN,BREN 50` |
+| `node scripts/scanner-api.js tape [TICKERS] [LIMIT]` | Tracks tick-by-tick Running Trade (**Rule-of-5 exception** — default limit 20) | `node scripts/scanner-api.js tape CUAN,BREN 20` |
 | `node ../sentiment-analyst/scripts/sentiment-api.js official MACRO 3` | **LIVE INTRADAY FOREIGN FLOW (Sesi 1/2):** Fetches official @Stockbit stream. If you see a PDF attachment for "Foreign Transaction Midday Data", download and read it using `view_file` to get real live foreign flow! | `node ../sentiment-analyst/scripts/sentiment-api.js official MACRO 3` |
 
 ## 2. Market Mover Types

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradingsquad://schemas/broker-summary",
+  "title": "BrokerSummaryOutput",
+  "description": "Raw marketdetectors payload from institutional-api broker/foreign commands",
+  "type": "object",
+  "properties": {
+    "symbol": { "type": "string" },
+    "period": { "type": "string" },
+    "brokers": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "summary": { "type": "object" }
+  },
+  "additionalProperties": true
+}

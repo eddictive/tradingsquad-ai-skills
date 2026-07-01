@@ -4,6 +4,9 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../core")))
 from stockbit_auth import StockbitClient
+from rule_of_five import RULE_OF_FIVE, trim_to_rule_of_five
+from wib import get_wib_date_string
+from concurrency import map_pool
 
 class ScannerAPIClient(StockbitClient):
     
@@ -19,7 +22,7 @@ class ScannerAPIClient(StockbitClient):
         data = response.get("data", {}).get("mover_list", [])
         
         result = []
-        for m in data[:10]:
+        for m in trim_to_rule_of_five(data):
             result.append({
                 "ticker": m["stock_detail"]["code"],
                 "price": m["price"],
@@ -56,10 +59,9 @@ class ScannerAPIClient(StockbitClient):
             if not top_buy_page and not top_sell_page:
                 break
                 
-        limit = max_pages * 10
         return {
-            "topBuy": [{"ticker": b["code"], "value": b["value"]["formatted"], "avg_price": b["average"]["formatted"]} for b in all_top_buy[:limit]],
-            "topSell": [{"ticker": s["code"], "value": s["value"]["formatted"], "avg_price": s["average"]["formatted"]} for s in all_top_sell[:limit]]
+            "topBuy": [{"ticker": b["code"], "value": b["value"]["formatted"], "avg_price": b["average"]["formatted"]} for b in trim_to_rule_of_five(all_top_buy)],
+            "topSell": [{"ticker": s["code"], "value": s["value"]["formatted"], "avg_price": s["average"]["formatted"]} for s in trim_to_rule_of_five(all_top_sell)]
         }
 
     def run_screener(self, template="ACCUMULATION"):
@@ -106,8 +108,7 @@ class ScannerAPIClient(StockbitClient):
 
     def get_live_draggers(self, group_name="giants"):
         import time
-        from datetime import datetime, timezone, timedelta
-        
+
         try:
             emitens_path = os.path.join(os.path.dirname(__file__), "../../../core/emitens.json")
             with open(emitens_path, "r") as f:
@@ -118,52 +119,54 @@ class ScannerAPIClient(StockbitClient):
         except Exception as e:
             print(f"[WARN] Falling back to default giants. Error: {e}")
             giants = ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'BREN', 'TPIA', 'BYAN', 'DSSA', 'KLBF', 'UNVR', 'ICBP', 'GOTO', 'ADRO']
-            
-        results = []
-        
+
         end_ts = int(time.time())
-        start_ts = end_ts - (5 * 24 * 60 * 60) # 5 days to handle weekends
-        
-        # WIB is UTC+7
-        wib_tz = timezone(timedelta(hours=7))
-        wib_date = datetime.now(wib_tz)
-        today_str = wib_date.strftime('%Y-%m-%d')
-        
-        for ticker in giants:
-            try:
-                params = {
-                    "from": end_ts,
-                    "to": start_ts,
-                    "limit": 0,
-                    "minutes_multiplier": 1
-                }
-                raw_data = self._get_exodus(f"/chartbit/{ticker}/price/intraday", params)
-                candles = raw_data.get("data", {}).get("chartbit", [])
-                
-                today_candles = [c for c in candles if c.get("datetime", "").startswith(today_str)]
-                prev_candles = [c for c in candles if not c.get("datetime", "").startswith(today_str)]
-                
-                if today_candles and prev_candles:
-                    today_candles.sort(key=lambda x: x["unix_timestamp"])
-                    prev_candles.sort(key=lambda x: x["unix_timestamp"])
-                    
-                    open_price = today_candles[0]["open"]
-                    prev_close = prev_candles[-1]["close"]
-                    close_price = today_candles[-1]["close"]
-                    change = ((close_price - prev_close) / prev_close) * 100
-                    results.append({
-                        "ticker": ticker,
-                        "open": open_price,
-                        "prevClose": prev_close,
-                        "close": close_price,
-                        "changePercent": f"{change:.2f}%"
-                    })
-            except Exception:
-                pass
-                
-        lifters = sorted([r for r in results if float(r["changePercent"].replace('%', '')) >= 0], key=lambda x: float(x["changePercent"].replace('%', '')), reverse=True)
-        draggers = sorted([r for r in results if float(r["changePercent"].replace('%', '')) < 0], key=lambda x: float(x["changePercent"].replace('%', '')))
-        
+        start_ts = end_ts - (5 * 24 * 60 * 60)
+        today_str = get_wib_date_string()
+
+        def fetch_ticker(ticker):
+            params = {
+                "from": end_ts,
+                "to": start_ts,
+                "limit": 0,
+                "minutes_multiplier": 1
+            }
+            raw_data = self._get_exodus(f"/chartbit/{ticker}/price/intraday", params)
+            candles = raw_data.get("data", {}).get("chartbit", [])
+
+            today_candles = [c for c in candles if c.get("datetime", "").startswith(today_str)]
+            prev_candles = [c for c in candles if not c.get("datetime", "").startswith(today_str)]
+
+            if not today_candles or not prev_candles:
+                return None
+
+            today_candles.sort(key=lambda x: x["unix_timestamp"])
+            prev_candles.sort(key=lambda x: x["unix_timestamp"])
+
+            open_price = today_candles[0]["open"]
+            prev_close = prev_candles[-1]["close"]
+            close_price = today_candles[-1]["close"]
+            change = ((close_price - prev_close) / prev_close) * 100
+            return {
+                "ticker": ticker,
+                "open": open_price,
+                "prevClose": prev_close,
+                "close": close_price,
+                "changePercent": f"{change:.2f}%"
+            }
+
+        results = map_pool(giants, 4, fetch_ticker)
+
+        lifters = sorted(
+            [r for r in results if float(r["changePercent"].replace('%', '')) >= 0],
+            key=lambda x: float(x["changePercent"].replace('%', '')),
+            reverse=True
+        )
+        draggers = sorted(
+            [r for r in results if float(r["changePercent"].replace('%', '')) < 0],
+            key=lambda x: float(x["changePercent"].replace('%', ''))
+        )
+
         return {"lifters": lifters, "draggers": draggers}
 
     def get_top_broker(self, period="TB_PERIOD_LAST_1_DAY"):
@@ -174,7 +177,7 @@ class ScannerAPIClient(StockbitClient):
             "market_type": "MARKET_TYPE_REGULER"
         }
         response = self._get_exodus("/order-trade/broker/top", params)
-        data = response.get("data", {}).get("list", [])[:10]
+        data = trim_to_rule_of_five(response.get("data", {}).get("list", []))
         return [{
             "broker_code": b.get("code"),
             "name": b.get("name"),
@@ -205,7 +208,7 @@ class ScannerAPIClient(StockbitClient):
                     "value": val
                 })
             res.sort(key=lambda x: abs(float(x["value"])), reverse=True)
-            return res[:10]
+            return trim_to_rule_of_five(res)
 
         return {
             "bandar_detector": bandar_detector,
@@ -215,7 +218,7 @@ class ScannerAPIClient(StockbitClient):
 
     def get_trending(self):
         response = self._get_exodus("/emitten/trending")
-        data = response.get("data", {}).get("list", [])[:15]
+        data = trim_to_rule_of_five(response.get("data", {}).get("list", []))
         return [{
             "ticker": t.get("code"),
             "company_name": t.get("name"),
@@ -227,13 +230,13 @@ class ScannerAPIClient(StockbitClient):
             "transaction_type": "TRANSACTION_TYPE_NET",
             "market_board": "MARKET_BOARD_REGULER",
             "investor_type": "INVESTOR_TYPE_ALL",
-            "limit": 25,
+            "limit": RULE_OF_FIVE,
             "period": period
         }
         response = self._get_exodus(f"/marketdetectors/{ticker}", params)
         return response.get("data", None)
 
-    def get_running_trade(self, symbols, limit=50):
+    def get_running_trade(self, symbols, limit=20):
         query_string = f"action_type=RUNNING_TRADE_ACTION_TYPE_ALL&sort=DESC&limit={limit}&order_by=RUNNING_TRADE_ORDER_BY_TIME"
         if symbols:
             for s in symbols:
@@ -253,50 +256,71 @@ class ScannerAPIClient(StockbitClient):
             "market_board": rt.get("market_board")
         } for rt in running_trade]
 
+SCANNER_CLI_COMMANDS = [
+    {"usage": "livedraggers [GROUP]", "detail": "Live intraday draggers/lifters (default group: giants)"},
+    {"usage": "detector <TICKER> [PERIOD]", "detail": "Symbol bandar detector & broker summary"},
+    {"usage": "tape <TICKERS> [LIMIT]", "detail": "Running trade tape (Rule-of-5 exception, default 20)"},
+    {"usage": "whale <BROKER>", "detail": "Stocks accumulated by a specific broker"},
+    {"usage": "topbroker [PERIOD]", "detail": "Top brokers by transaction value"},
+    {"usage": "trending", "detail": "Crowd sentiment / trending stocks"},
+    {"usage": "mover [TYPE]", "detail": "Market movers (EOD-delayed foreign flow)"},
+    {"usage": "topstock <START> <END>", "detail": "Top foreign buy/sell by date range"},
+    {"usage": "screener [ACCUMULATION|REBOUND]", "detail": "Custom screener template"},
+]
+
+
+def print_scanner_help():
+    from cli_help import print_help
+    print_help("scanner-api.py", "Market-wide scanner & live tape API", SCANNER_CLI_COMMANDS)
+
+
 if __name__ == "__main__":
+    from cli_help import wants_help
+
+    argv = sys.argv[1:]
+    if wants_help(argv) or not argv:
+        print_scanner_help()
+        sys.exit(1 if not argv else 0)
+
     api = ScannerAPIClient()
-    action = sys.argv[1] if len(sys.argv) > 1 else "mover"
-    
-    if action == "mover":
-        data = api.get_market_mover()
-        print("Top Net Foreign Buy:", json.dumps(data, indent=2))
-    elif action == "topstock":
-        data = api.get_top_stock("2026-06-01", "2026-06-25")
-        print("Top Foreign Stock:", json.dumps(data, indent=2))
-    elif action == "screener":
-        template = sys.argv[2] if len(sys.argv) > 2 else "ACCUMULATION"
-        data = api.run_screener(template)
-        print(f"Screener [{template}]:", json.dumps(data, indent=2))
-    elif action == "livedraggers":
-        group = sys.argv[2] if len(sys.argv) > 2 else "giants"
-        data = api.get_live_draggers(group)
-        print(f"Live Draggers [{group}]:", json.dumps(data, indent=2))
-    elif action == "topbroker":
-        period = sys.argv[2] if len(sys.argv) > 2 else "TB_PERIOD_LAST_1_DAY"
-        data = api.get_top_broker(period)
-        print(f"Top Brokers [{period}]:", json.dumps(data, indent=2))
-    elif action == "whale":
-        if len(sys.argv) < 3:
-            print("Provide broker code, e.g. python scanner-api.py whale AK")
-            sys.exit(1)
-        broker = sys.argv[2]
-        data = api.get_whale_activity(broker)
-        print(f"Whale Activity [{broker}]:", json.dumps(data, indent=2))
-    elif action == "trending":
-        data = api.get_trending()
-        print("Trending Stocks:", json.dumps(data, indent=2))
-    elif action == "detector":
-        if len(sys.argv) < 3:
-            print("Provide ticker code, e.g. python scanner-api.py detector CUAN")
-            sys.exit(1)
-        ticker = sys.argv[2]
-        period = sys.argv[3] if len(sys.argv) > 3 else "BROKER_SUMMARY_PERIOD_LATEST"
-        data = api.get_symbol_detector(ticker, period)
-        print(f"Symbol Detector [{ticker}]:", json.dumps(data, indent=2))
-    elif action == "tape":
-        symbols_arg = sys.argv[2] if len(sys.argv) > 2 else ""
-        symbols = symbols_arg.split(',') if symbols_arg else []
-        limit = int(sys.argv[3]) if len(sys.argv) > 3 else 20
-        data = api.get_running_trade(symbols, limit)
-        print("Running Trade Tape:", json.dumps(data, indent=2))
+    api.login()
+    action = argv[0]
+
+    try:
+        if action == "mover":
+            mover_type = argv[1] if len(argv) > 1 else "MOVER_TYPE_NET_FOREIGN_BUY"
+            print(json.dumps(api.get_market_mover(mover_type), indent=2))
+        elif action == "topstock":
+            start = argv[1] if len(argv) > 1 else "2026-06-26"
+            end = argv[2] if len(argv) > 2 else start
+            print(json.dumps(api.get_top_stock(start, end), indent=2))
+        elif action == "screener":
+            template = argv[1] if len(argv) > 1 else "ACCUMULATION"
+            print(json.dumps(api.run_screener(template), indent=2))
+        elif action == "livedraggers":
+            group = argv[1] if len(argv) > 1 else "giants"
+            print(json.dumps(api.get_live_draggers(group), indent=2))
+        elif action == "topbroker":
+            period = argv[1] if len(argv) > 1 else "TB_PERIOD_LAST_1_DAY"
+            print(json.dumps(api.get_top_broker(period), indent=2))
+        elif action == "whale":
+            if len(argv) < 2:
+                raise ValueError("Usage: scanner-api.py whale <BROKER>")
+            print(json.dumps(api.get_whale_activity(argv[1]), indent=2))
+        elif action == "trending":
+            print(json.dumps(api.get_trending(), indent=2))
+        elif action == "detector":
+            if len(argv) < 2:
+                raise ValueError("Usage: scanner-api.py detector <TICKER>")
+            period = argv[2] if len(argv) > 2 else "BROKER_SUMMARY_PERIOD_LATEST"
+            print(json.dumps(api.get_symbol_detector(argv[1], period), indent=2))
+        elif action == "tape":
+            symbols = argv[1].split(",") if len(argv) > 1 and argv[1] else []
+            limit = int(argv[2]) if len(argv) > 2 else 20
+            print(json.dumps(api.get_running_trade(symbols, limit), indent=2))
+        else:
+            raise ValueError(f"Unknown command: {action}. Run with --help.")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 

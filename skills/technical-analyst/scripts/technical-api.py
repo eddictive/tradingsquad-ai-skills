@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../core")))
 from stockbit_auth import StockbitClient
+from wib import filter_from_market_open
 
 class TechnicalAPIClient(StockbitClient):
 
@@ -485,9 +486,8 @@ class TechnicalAPIClient(StockbitClient):
                 return {"error": "No intraday data found"}
                 
             last_price = float(data[-1].get("close", 0))
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            today_data = [c for c in data if str(c.get("date") or c.get("datetime") or "").startswith(today_str)]
-            active_data = today_data if today_data else data
+            session_data = filter_from_market_open(data)
+            active_data = session_data if session_data else data
             hl = self._get_high_low(active_data)
             
             return {
@@ -505,6 +505,7 @@ class TechnicalAPIClient(StockbitClient):
                 "SMC_Structural_H1": self._calc_smc(h1_data) if h1_data else None,
                 "SMC_Edge_M5": self._calc_smc(data),
                 "dayHighLow": hl,
+                "sessionWindow": "09:00-16:00 WIB",
                 "fibonacci": self._calc_fibonacci(hl["high"], hl["low"]),
                 "historicalFVGWinRate": self._calc_smc_backtest(daily_data) if daily_data else None
             }
@@ -518,9 +519,8 @@ class TechnicalAPIClient(StockbitClient):
             last_price = float(data[-1].get("close", 0))
             hl = self._get_high_low(data)
             
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            today_data = [c for c in data if str(c.get("date") or c.get("datetime") or "").startswith(today_str)]
-            active_data = today_data if today_data else data[-28:]
+            session_data = filter_from_market_open(data)
+            active_data = session_data if session_data else data[-28:]
             
             return {
                 "mode": "SHORT_SWING_MTF",
@@ -605,15 +605,41 @@ class TechnicalAPIClient(StockbitClient):
             raise ValueError("Invalid mode. Use 'intraday', 'short_swing', 'swing', or 'longterm'.")
 
 
+TECH_CLI_COMMANDS = [
+    {"usage": "analyze <TICKER> <MODE>", "aliases": ["(default)"], "detail": "Modes: intraday, short_swing, swing, longterm (see core/trading-modes.json)"},
+    {"usage": "<TICKER> <MODE>", "detail": "Shorthand for analyze (e.g. BBCA short_swing)"},
+]
+
+
+def print_technical_help():
+    from cli_help import print_help
+    print_help("technical-api.py", "Context-aware technical analysis API", TECH_CLI_COMMANDS)
+
+
 if __name__ == "__main__":
-    api = TechnicalAPIClient()
+    from cli_help import wants_help
+
+    argv = sys.argv[1:]
+    if wants_help(argv) or not argv:
+        print_technical_help()
+        sys.exit(1 if not argv else 0)
+
+    if argv[0] == "analyze":
+        ticker = argv[1] if len(argv) > 1 else None
+        mode = argv[2] if len(argv) > 2 else "swing"
+    else:
+        ticker = argv[0]
+        mode = argv[1] if len(argv) > 1 else "swing"
+
+    if not ticker:
+        print("Error: Usage: technical-api.py <TICKER> <MODE>", file=sys.stderr)
+        sys.exit(1)
+
     try:
+        api = TechnicalAPIClient()
         api.login()
-        ticker = sys.argv[1] if len(sys.argv) > 1 else "BBCA"
-        mode = sys.argv[2] if len(sys.argv) > 2 else "swing"
-        
         data = api.get_analysis(ticker, mode)
-        print(f"Technical Analysis [{mode.upper()}] for {ticker}:")
         print(json.dumps(data, indent=2))
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

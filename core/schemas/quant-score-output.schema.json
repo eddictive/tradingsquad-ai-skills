@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradingsquad://schemas/quant-score-output",
+  "title": "QuantScoreOutput",
+  "description": "Deterministic output from core/quant-score calculateQuantScore()",
+  "type": "object",
+  "required": ["totalQuantScore", "quantScore", "maxScore", "rating", "weights", "breakdown"],
+  "properties": {
+    "ticker": { "type": ["string", "null"] },
+    "totalQuantScore": { "type": "number", "minimum": 0, "maximum": 100 },
+    "quantScore": { "type": "number", "minimum": 0, "maximum": 100 },
+    "maxScore": { "type": "number", "const": 100 },
+    "rating": {
+      "type": "string",
+      "enum": ["STRONG BUY", "BUY", "HOLD", "SELL", "STRONG SELL"]
+    },
+    "weights": {
+      "type": "object",
+      "required": ["technical", "fundamental", "sentiment", "bandarmologi"],
+      "properties": {
+        "technical": { "type": "number", "const": 20 },
+        "fundamental": { "type": "number", "const": 20 },
+        "sentiment": { "type": "number", "const": 20 },
+        "bandarmologi": { "type": "number", "const": 40 }
+      }
+    },
+    "breakdown": { "type": "object" },
+    "methodology": { "type": "string" },
+    "spec": { "type": "string" }
+  }
+}

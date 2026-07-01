@@ -34,7 +34,8 @@ Instead of performing complex math, the LLM inside `institutional-analyst` simpl
 ## 3. The "Rule of 5" Token Optimization
 
 To prevent LLM hallucination and "Dilution of Attention", the Bandarmology scripts and AI instructions strictly adhere to the **Rule of 5**. 
-- The API is strictly hardcoded to pull `limit=5`.
+- API defaults enforce `limit=5` via `core/rule-of-five.js` / `rule_of_five.py` (`RULE_OF_FIVE`, `clampLimit()` / `trimToRuleOfFive()`).
+- Documented exceptions (e.g. `tape` running-trade) may use higher limits for velocity analysis.
 - The AI's Markdown report template forces exactly 5 output rows for Net Buyers and Net Sellers.
 
 **Why?** In Indonesian markets, the Top 5 brokers usually account for 70%-80% of institutional liquidity. Passing Top 10 or Top 20 brokers into the LLM context introduces retail noise, causing the AI to over-analyze insignificant players and skewing the Smart Money Score.

@@ -10,27 +10,7 @@ When you request an Institutional Analysis, the AI framework automatically chain
 
 ### Supported Trading Modes & Intent Mapping
 
-To get the most accurate analysis, your prompt should imply or explicitly state your trading timeframe. The AI will automatically orchestrate its tools based on the following classification:
-
-- **Intraday / Scalping (1-3 Days)**
-  - *Context*: Focuses on VWAP, 1H/15m timeframe, fast momentum, and live tape reading.
-  - *Example Prompts*: "Analisis ADRO untuk scalping hari ini", "Cek momentum BBCA buat day trade", "Apakah BREN kuat naik sampai penutupan sesi 2?"
-  - *Action*: The AI fetches 1-day or 5-day broker summary and intraday technicals.
-
-- **Short Swing (1-3 Weeks)**
-  - *Context*: Focuses on Daily (1D) chart, MA10/MA20, and short-term accumulation.
-  - *Example Prompts*: "Analisis swing pendek TINS", "Gimana prospek BUMI buat 2 minggu ke depan?", "Cek bandarmologi GOTO bulan ini."
-  - *Action*: The AI fetches 1-week or 1-month broker summary and daily trend technicals.
-
-- **Swing / Medium Term (1-3 Months)**
-  - *Context*: Focuses on Daily/Weekly (1W) chart, MA50, and 3-month Fibonacci.
-  - *Example Prompts*: "Analisis swing medium term AMMN", "Proyeksi harga BRPT 3 bulan ke depan", "Apakah aman hold ASII sampai kuartal depan?"
-  - *Action*: The AI fetches 1-month or 3-month broker summary and medium-term technicals.
-
-- **Long Term / Investing (6 Months - Years)**
-  - *Context*: Focuses on Weekly/Monthly chart, MA200, fundamental fair value, and macro trends.
-  - *Example Prompts*: "Analisis long term BBRI buat nabung saham", "Fundamental check INDF untuk hold 2 tahun", "Proyeksi profitabilitas PTBA FY 2026."
-  - *Action*: The AI fetches 3-month or 6-month broker summary and delegates heavily to the fundamental-analyst for valuation.
+To get the most accurate analysis, your prompt should imply or explicitly state your trading timeframe. See **`core/TRADING_MODES.md`** (human-readable) and **`core/trading-modes.json`** (machine-readable) for the full mode table, broker-summary periods, and example prompts.
 
 ### How to Prompt
 Start your CLI inside the project directory and simply ask the lead analyst:
@@ -39,7 +19,7 @@ Start your CLI inside the project directory and simply ask the lead analyst:
 
 ### What Happens Under The Hood?
 1. The **`institutional-analyst`** reads your prompt and sees it requires OHLCV metrics, Quant Scores, Fundamental data, and news validation.
-2. It **delegates** tasks using the `invoke_subagent` tool: Technical charting to **`technical-analyst`**, valuation to **`fundamental-analyst`**, and news/catalysts to **`sentiment-analyst`**.
+2. It **delegates** tasks per **`ORCHESTRATION.md`** (Antigravity: `invoke_subagent`; Grok/Claude/Codex: read sub-skill `SKILL.md` + run scripts): Technical charting to **`technical-analyst`**, valuation to **`fundamental-analyst`**, and news/catalysts to **`sentiment-analyst`**.
 3. The `technical-analyst` runs `technical-api.js` to fetch Intraday/Daily candlestick data and groups the data into technical buckets (e.g., MA20 crossing MA50, RSI values).
 4. The `fundamental-analyst` runs `fundamental-api.js` to fetch KeyStats (PBV, PE) and calculates the exact **Intrinsic Value (Nilai Wajar)** and **Margin of Safety**.
 5. The `sentiment-analyst` parses macro news and insider trading flows to check if the retail crowd is being trapped by orchestrated hype.

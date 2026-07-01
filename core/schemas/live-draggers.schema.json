@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tradingsquad://schemas/live-draggers",
+  "title": "LiveDraggersOutput",
+  "description": "Output from scanner-api livedraggers command",
+  "type": "object",
+  "required": ["lifters", "draggers"],
+  "properties": {
+    "lifters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/draggerItem" }
+    },
+    "draggers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/draggerItem" }
+    }
+  },
+  "$defs": {
+    "draggerItem": {
+      "type": "object",
+      "required": ["ticker", "open", "prevClose", "close", "changePercent"],
+      "properties": {
+        "ticker": { "type": "string", "pattern": "^[A-Z]{4}$" },
+        "open": { "type": "number" },
+        "prevClose": { "type": "number" },
+        "close": { "type": "number" },
+        "changePercent": { "type": "string" }
+      }
+    }
+  }
+}

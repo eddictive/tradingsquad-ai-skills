@@ -6,7 +6,7 @@ By equipping your AI agents with these skills, you enable them to perform high-l
 
 ## 🚀 Features
 
-- **Multi-Agent Collaboration**: Skills autonomously delegate tasks to each other. For example, the `institutional-analyst` seamlessly queries the `technical-analyst` and `fundamental-analyst` to build a unified **Quant Score 2.0**.
+- **Multi-Agent Collaboration**: Skills autonomously delegate tasks to each other. For example, the `institutional-analyst` seamlessly queries all four analytical engines to build a unified **Master Quant Score (360°)**.
 - **Dual Language Runtimes**: Every API workflow is natively written in **Python** (via `requests`) and **JavaScript** (via native `fetch`), supporting Node.js and Bun environments with zero npm dependencies.
 - **Shared Core Authentication**: A centralized `core/` module handles all Stockbit API logins, `XSRF-TOKEN` tracking, and secure `.stockbit_token.json` caching globally across all agents.
 - **Institutional Analyst (The Brain/Orchestrator)**: Performs Wyckoff market structure evaluation, tape reading, order book intelligence, and **Multi-Timeframe Bandarmology** (comparing Intraday vs 1-Month broker flow to detect cornering and shakeouts). Employs the **Rule of 5** to filter retail noise and maintain optimal LLM signal-to-noise ratios. Acts as the Master Orchestrator, automatically delegating tasks to sub-agents.
@@ -20,40 +20,36 @@ By equipping your AI agents with these skills, you enable them to perform high-l
 
 ```text
 tradingsquad-ai-skills/
-├── README.md           
-├── INSTALLATION.md     # Automated CLI installation instructions
-├── USER_GUIDE.md       # Multi-agent workflow and prompting guide
-├── AGENTS.md           # Master Trading Context & Data Integrity Rules
-├── skills.json         # Skill registry mapping for AI auto-discovery
-├── core/
-│   ├── stockbit_auth.py    # Shared Auth client (Python)
-│   └── stockbit-auth.js    # Shared Auth client (JS/Node)
-└── skills/
-    ├── fundamental-analyst/  
+├── README.md
+├── AGENTS.md              # Master trading rules (installed for agents)
+├── ORCHESTRATION.md       # Multi-agent delegation (installed for agents)
+├── skills.json            # Skill manifest for installer / auto-discovery
+├── docs/                  # User & developer documentation
+├── scripts/               # Installer + workspace shims
+├── core/                  # Shared auth, WIB, quant-score, schemas
+└── skills/                # Analyst skills (SKILL.md + API scripts)
     ├── institutional-analyst/
-    ├── market-scanner/       # Real-time intraday draggers & lifters
-    │   ├── SKILL.md
-    │   └── scripts/
-    │       ├── scanner-api.py 
-    │       └── scanner-api.js 
-    ├── sentiment-analyst/    # Macro news & insider flow
-    └── technical-analyst/    
-        ├── SKILL.md
-        └── scripts/
-            ├── technical-api.py
-            └── technical-api.js
+    ├── technical-analyst/
+    ├── fundamental-analyst/
+    ├── sentiment-analyst/
+    └── market-scanner/
 ```
 
 ## 📖 Documentation
 
-To get started with configuring and using TradingSquad AI Skills, please refer to the following guides:
-
-- **[Installation Guide](INSTALLATION.md)**: Steps to run the automated installer, set up environment variables for the Stockbit API, and configure your CLI.
-- **[User Guide](USER_GUIDE.md)**: Detailed instructions on how to prompt the agent, utilize Multi-Agent cross-delegation, and authenticate the Shared Core.
+| Guide | Link |
+|-------|------|
+| Installation & BYOT setup | [docs/INSTALLATION.md](docs/INSTALLATION.md) |
+| User guide & prompting | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) |
+| Orchestration (agents) | [ORCHESTRATION.md](ORCHESTRATION.md) |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Contributing | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) |
+| Roadmap & audit | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| Changelog | [docs/CHANGELOG.md](docs/CHANGELOG.md) |
 
 ## ⚙️ Core Philosophy
 
-These skills force the LLM to output probability-based scenarios rather than certainties. Every analysis relies on **Quant Score 2.0**—a 100-point robust metric scoring Technicals (50%), Fundamentals (20%), and Bandarmology (30%). Finally, every output provides an exact **Entry Zone**, **Stop Loss**, **Risk-Reward Ratio**, and a clear **Invalidation Level**.
+These skills force the LLM to output probability-based scenarios rather than certainties. Every analysis relies on the **Master Quant Score (360°)**—a 100-point metric across four engines: Technical Momentum (20%), Fundamental & Value (20%), Catalyst & Sentiment (20%), and Bandarmologi Flow (40%). Ratings: STRONG BUY / BUY / HOLD / SELL / STRONG SELL. See `core/quant-score-spec.json`.
 
 
 ---

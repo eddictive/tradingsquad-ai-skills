@@ -1,4 +1,5 @@
 const { StockbitClient } = require('../../../core/stockbit-auth.js');
+const { RULE_OF_FIVE, clampLimit } = require('../../../core/rule-of-five.js');
 
 class InstitutionalAPIClient extends StockbitClient {
   async getOrderbook(ticker) {
@@ -6,24 +7,24 @@ class InstitutionalAPIClient extends StockbitClient {
     return data.data || {};
   }
 
-  async getBrokerSummary(ticker, limit = 25, options = {}) {
+  async getBrokerSummary(ticker, limit = RULE_OF_FIVE, options = {}) {
     const params = {
       transaction_type: "TRANSACTION_TYPE_NET",
       market_board: "MARKET_BOARD_REGULER",
       investor_type: "INVESTOR_TYPE_ALL",
-      limit,
+      limit: clampLimit(limit),
       ...options
     };
     const data = await this._getExodus(`/marketdetectors/${ticker}`, params);
     return data.data || {};
   }
 
-  async getForeignFlow(ticker, limit = 25, options = {}) {
+  async getForeignFlow(ticker, limit = RULE_OF_FIVE, options = {}) {
     const params = {
       transaction_type: "TRANSACTION_TYPE_NET",
       market_board: "MARKET_BOARD_REGULER",
       investor_type: "INVESTOR_TYPE_FOREIGN",
-      limit,
+      limit: clampLimit(limit),
       ...options
     };
     const data = await this._getExodus(`/marketdetectors/${ticker}`, params);
@@ -45,16 +46,60 @@ class InstitutionalAPIClient extends StockbitClient {
   }
 }
 
-if (require.main === module) {
-  (async () => {
-    const api = new InstitutionalAPIClient();
-    try {
-      await api.login();
-      const data = await api.getBrokerSummary("BBCA", 5);
-      console.log("Institutional Data Example (BBCA Broker Flow):", data);
-    } catch (e) {
-      console.error(e.message);
-    }
-  })();
+const CLI_COMMANDS = [
+  { usage: 'broker <TICKER> [PERIOD]', detail: 'Broker summary (Rule of 5). PERIOD e.g. BROKER_SUMMARY_PERIOD_LAST_1_MONTH' },
+  { usage: 'foreign <TICKER> [PERIOD]', detail: 'Foreign flow summary (Rule of 5)' },
+  { usage: 'orderbook <TICKER>', detail: 'Live orderbook bid/ask' },
+  { usage: 'distribution <TICKER>', detail: 'Broker distribution network (who sold to whom)' },
+];
+
+function printInstitutionalHelp() {
+  const { printHelp } = require('../../../core/cli-help.js');
+  printHelp('institutional-api.js', 'Institutional bandarmology & order flow API', CLI_COMMANDS);
 }
-module.exports = { InstitutionalAPIClient };
+
+async function runInstitutionalCLI(argv) {
+  const { wantsHelp } = require('../../../core/cli-help.js');
+  if (wantsHelp(argv) || argv.length === 0) {
+    printInstitutionalHelp();
+    process.exit(argv.length === 0 ? 1 : 0);
+  }
+
+  const api = new InstitutionalAPIClient();
+  await api.login();
+
+  const [command, ticker, periodOrExtra] = argv;
+  const periodOpt = periodOrExtra && periodOrExtra.startsWith('BROKER_')
+    ? { period: periodOrExtra }
+    : {};
+
+  switch (command) {
+    case 'broker':
+      if (!ticker) throw new Error('Usage: institutional-api.js broker <TICKER> [PERIOD]');
+      console.log(JSON.stringify(await api.getBrokerSummary(ticker, undefined, periodOpt), null, 2));
+      break;
+    case 'foreign':
+      if (!ticker) throw new Error('Usage: institutional-api.js foreign <TICKER> [PERIOD]');
+      console.log(JSON.stringify(await api.getForeignFlow(ticker, undefined, periodOpt), null, 2));
+      break;
+    case 'orderbook':
+      if (!ticker) throw new Error('Usage: institutional-api.js orderbook <TICKER>');
+      console.log(JSON.stringify(await api.getOrderbook(ticker), null, 2));
+      break;
+    case 'distribution':
+      if (!ticker) throw new Error('Usage: institutional-api.js distribution <TICKER>');
+      console.log(JSON.stringify(await api.getBrokerDistribution(ticker), null, 2));
+      break;
+    default:
+      throw new Error(`Unknown command: ${command}. Run with --help.`);
+  }
+}
+
+if (require.main === module) {
+  runInstitutionalCLI(process.argv.slice(2)).catch((e) => {
+    console.error(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { InstitutionalAPIClient, printInstitutionalHelp };
