@@ -41,6 +41,42 @@ class SentimentAPIClient extends StockbitClient {
       ideas
     };
   }
+
+  /**
+   * Fetch breaking news / macro data from the Official @Stockbit account.
+   * If ticker is provided, filters for posts containing that ticker.
+   */
+  async getOfficialStockbitNews(limit = 10, ticker = null) {
+    const params = {
+      category: 'STREAM_CATEGORY_PEOPLE_WATCHLIST',
+      keyword: '@Stockbit',
+      limit: 25 // Fetch more initially to allow filtering
+    };
+    const response = await this._getExodus(`/stream/v3`, params);
+    
+    if (!response.data || !response.data.stream) return [];
+    
+    let posts = response.data.stream;
+    
+    // Filter posts
+    posts = posts.filter(post => {
+      if (ticker) {
+        const hasTickerInMask = post.mask_html && post.mask_html.some(m => m.text === `$${ticker}`);
+        const hasTickerInContent = post.content_original.includes(`$${ticker}`);
+        return hasTickerInMask || hasTickerInContent;
+      }
+      return true; // If macro mode (no ticker), return all
+    });
+
+    return posts.slice(0, limit).map(post => {
+      return {
+        id: post.stream_id,
+        date: post.created_display,
+        content: post.content_original,
+        likes: post.reaction && post.reaction.reactions ? post.reaction.total : 0
+      };
+    });
+  }
 }
 
 if (require.main === module) {

@@ -22,11 +22,16 @@ For sentiment data, utilize either `sentiment-api.py` or `sentiment-api.js` in t
 1. **DO NOT write your own Stockbit API wrappers or scraping scripts from scratch.** It wastes time and breaks BYOT authentication.
 2. You MUST use the existing `sentiment-api.js` or `sentiment-api.py` located in this skill's `scripts/` directory (e.g. `.agents/skills/sentiment-analyst/scripts/`).
 3. **Execution Examples**: Use the `run_command` tool to execute a one-liner to fetch what you need.
+   - For Official Breaking News & Domestic Macro Data (Priority 1):
+     `node -e "const { SentimentAPIClient } = require('./.agents/skills/sentiment-analyst/scripts/sentiment-api.js'); (async () => { const api = new SentimentAPIClient(); await api.login(); console.log(JSON.stringify(await api.getOfficialStockbitNews(5), null, 2)); })()"`
    - For Stockbit Sentiment (Local):
      `node -e "const { SentimentAPIClient } = require('./.agents/skills/sentiment-analyst/scripts/sentiment-api.js'); (async () => { const api = new SentimentAPIClient(); await api.login(); console.log(JSON.stringify(await api.getAggregatedSentiment('BBCA'), null, 2)); })()"`
    - For Global & Macro News Catalysts:
      `node .agents/skills/sentiment-analyst/scripts/macro-news.js all`
      (or `python3 .agents/skills/sentiment-analyst/scripts/macro-news.py all`)
+
+## getOfficialStockbitNews(limit, ticker)
+**CRITICAL:** When a user asks for a "Macro Outlook", "IHSG analysis", or when checking breaking news for a specific ticker, **ALWAYS** prioritize running this method first. This grabs the highly curated, official Stockbit news stream which breaks domestic macro data (e.g. PMI, BI Rates, Inflation) and major corporate actions faster than RSS feeds.
 
 ## macro-news.js / macro-news.py
 Retrieves the latest top news headlines from Bloomberg, WSJ, Yahoo Finance, and CNBC (Global and Indonesia).
@@ -34,6 +39,7 @@ Use this to detect major macroeconomic catalysts (e.g., FOMC, Fed rates, Geopoli
 **CRITICAL:** Actively scan for **Index Rebalancing** news (e.g., MSCI, FTSE Russell) and **International Rating Updates** (e.g., Goldman Sachs, JP Morgan, Fitch, Moody's). These reports trigger automated, algorithmic, and massive foreign flow adjustments in the IDX.
 
 ## getAggregatedSentiment(ticker)
+**CRITICAL:** When a user asks for a "Macro Outlook" or "IHSG analysis", **ALWAYS** use IHSG as ticker code.
 Retrieves a filtered object containing:
 *   `news`: Official news articles and media releases (STREAM_CATEGORY_NEWS).
 *   `reports`: Financial statements, public exposes, dividend announcements (STREAM_CATEGORY_REPORTS).
@@ -45,7 +51,8 @@ Retrieves a filtered object containing:
 # ANALYSIS FRAMEWORK
 
 ## PART 1 — MACRO & GLOBAL NARRATIVE
-First, run the `macro-news.py` script to detect the overarching global sentiment. Does a geopolitical tension (e.g., Middle East war) threaten oil prices and Indonesian fiscal stability? Is the Fed or BOJ changing interest rates? Determine if the macro environment provides a tailwind or headwind for the IDX (IHSG) and specific sectors (like Energy or Banking). 
+First, run `getOfficialStockbitNews(5)` from `sentiment-api.js` to catch any immediate, domestic breaking data (like Indonesia PMI, BI Rate decisions, or major IHSG market alerts). 
+Second, run the `macro-news.py` script to detect the overarching global sentiment. Does a geopolitical tension (e.g., Middle East war) threaten oil prices and Indonesian fiscal stability? Is the Fed or BOJ changing interest rates? Determine if the macro environment provides a tailwind or headwind for the IDX (IHSG) and specific sectors (like Energy or Banking). 
 **Index Provider Check:** Always check if the stock is being added to, removed from, or having its weighting changed in major global indices (MSCI / FTSE). Addition = Foreign Inflow Catalyst. Removal = Foreign Outflow Catalyst.
 
 ## PART 2 — CATALYST VS NOISE DETECTION
