@@ -65,15 +65,17 @@ For market data, utilize either `scanner-api.py` or `scanner-api.js` in the `scr
 | `node scripts/scanner-api.js topbroker [PERIOD]` | Gets top brokers by transaction value. Period defaults to `TB_PERIOD_LAST_1_DAY` | `node scripts/scanner-api.js topbroker TB_PERIOD_LAST_1_DAY` |
 | `node scripts/scanner-api.js whale [BROKER_CODE]` | Gets stocks actively accumulated/distributed by a specific broker | `node scripts/scanner-api.js whale AK` |
 | `node scripts/scanner-api.js trending` | Gets current crowd sentiment (trending stocks) | `node scripts/scanner-api.js trending` |
-| `node scripts/scanner-api.js mover [TYPE]` | Gets top movers (e.g. MOVER_TYPE_TOP_VALUE) | `node scripts/scanner-api.js mover MOVER_TYPE_TOP_VALUE` |
-| `node scripts/scanner-api.js topstock [START] [END]` | Gets top foreign buy/sell flow over a date range | `node scripts/scanner-api.js topstock 2026-06-01 2026-06-25` |
+| `node scripts/scanner-api.js mover [TYPE]` | Gets top movers (e.g. MOVER_TYPE_TOP_VALUE). **Note: Foreign flow here is delayed by 1 day! DO NOT use for live intraday.** | `node scripts/scanner-api.js mover MOVER_TYPE_TOP_VALUE` |
+| `node scripts/scanner-api.js topstock [START] [END]` | Retrieves top stocks by foreign flow over a date range. **Note: If queried during live intraday, this returns YESTERDAY'S EOD data.** | `node scripts/scanner-api.js topstock 2026-07-01 2026-07-01` |
 | `node scripts/scanner-api.js screener [TYPE]` | Runs custom template screener (ACCUMULATION/REBOUND) | `node scripts/scanner-api.js screener ACCUMULATION` |
 | `node scripts/scanner-api.js livedraggers` | Scans 16 Big Caps (including BBNI, GOTO) to find live intraday draggers | `node scripts/scanner-api.js livedraggers` |
 | `node scripts/scanner-api.js detector [TICKER]` | Gets specific symbol detector (Bandar Detector & Broker Summary) | `node scripts/scanner-api.js detector CUAN` |
 | `node scripts/scanner-api.js tape [TICKERS] [LIMIT]` | Tracks the tick-by-tick Running Trade of one or multiple tickers | `node scripts/scanner-api.js tape CUAN,BREN 50` |
+| `node ../sentiment-analyst/scripts/sentiment-api.js official MACRO 3` | **LIVE INTRADAY FOREIGN FLOW (Sesi 1/2):** Fetches official @Stockbit stream. If you see a PDF attachment for "Foreign Transaction Midday Data", download and read it using `view_file` to get real live foreign flow! | `node ../sentiment-analyst/scripts/sentiment-api.js official MACRO 3` |
 
 ## 2. Market Mover Types
-- **Live Intraday Warning:** Data `topstock` dan `mover` (Foreign Flow) seringkali mengalami *delay* (direkap *End of Day*). Jika diminta menganalisis penggerak bursa saat jam perdagangan sedang berlangsung (Sesi 1 atau Sesi 2), WAJIB gunakan `node scripts/scanner-api.js livedraggers` untuk menarik pergerakan *real-time* dari 16 Saham Raksasa penentu IHSG (termasuk BBCA, BBRI, BMRI, BBNI, TLKM, AMMN, BREN, TPIA, BYAN, ASII, DSSA, GOTO).
+- **Live Intraday Warning:** Data `topstock` dan `mover` (Foreign Flow) di-censor oleh IDX dan akan *delay* (direkap *End of Day* / hari sebelumnya). **JANGAN PERNAH** melaporkan data dari `topstock` saat jam live trading sebagai "Data Sesi 1 Hari Ini". Labeli dengan jujur: *"Berdasarkan data EOD kemarin..."*
+- **Sesi 1 / Midday Foreign Flow:** Untuk mendapatkan data *foreign flow* asli di tengah hari, selalu gunakan `sentiment-api.js official MACRO` untuk mengekstrak tabel PDF *Midday Data* dari Stockbit. Jika PDF belum rilis, gunakan logika *price action* (VWAP & `livedraggers`).
 
 ---
 
@@ -86,6 +88,7 @@ When the user asks you to scan the market or find potential stocks, reply strict
 **Trend & Flow Radar**
 
 ## 1. Whale Tracker & Foreign Flow
+> **DATA SOURCE:** [MANDATORY: State exactly where you got this data. "Midday PDF from @Stockbit", "Yesterday's EOD Data (Delayed)", or "Livedraggers Proxy (Price Action)"]
 *(Analyze Top Broker Activity! If AK or ZP is the Top Broker, what exactly are they accumulating? List the top 5-10 stocks being accumulated by foreign/smart money and mention their average buying price. Why are they buying these specific sectors?)*
 - **[TICKER]**: ...
 
