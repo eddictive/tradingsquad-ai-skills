@@ -43,23 +43,26 @@ class SentimentAPIClient extends StockbitClient {
   }
 
   /**
-   * Fetch breaking news / macro data from the Official @Stockbit account.
+   * Fetch breaking news / macro data / midday data from the Official @Stockbit account.
    * If ticker is provided, filters for posts containing that ticker.
    */
   async getOfficialStockbitNews(limit = 10, ticker = null) {
-    const params = {
-      category: 'STREAM_CATEGORY_PEOPLE_WATCHLIST',
-      keyword: '@Stockbit',
+    const payload = {
+      category: 'STREAM_CATEGORY_MAIN_IDEAS',
+      last_stream_id: 0,
       limit: 25 // Fetch more initially to allow filtering
     };
-    const response = await this._getExodus(`/stream/v3`, params);
+    
+    // Using POST to the specific user stream endpoint for cleaner results
+    const response = await this._postExodus(`/stream/v3/user/Stockbit`, payload);
     
     if (!response.data || !response.data.stream) return [];
     
-    let posts = response.data.stream;
+    let posts = response.data.stream.map(item => item.idea || item);
     
     // Filter posts
     posts = posts.filter(post => {
+      if (!post || !post.content_original) return false;
       if (ticker) {
         const hasTickerInMask = post.mask_html && post.mask_html.some(m => m.text === `$${ticker}`);
         const hasTickerInContent = post.content_original.includes(`$${ticker}`);
@@ -73,6 +76,8 @@ class SentimentAPIClient extends StockbitClient {
         id: post.stream_id,
         date: post.created_display,
         content: post.content_original,
+        attachments: post.attachment || [], // Include PDFs
+        images: post.images || [], // Include image links
         likes: post.reaction && post.reaction.reactions ? post.reaction.total : 0
       };
     });
