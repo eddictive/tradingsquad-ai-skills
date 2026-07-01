@@ -280,5 +280,7 @@ if __name__ == "__main__":
         print("✅ Stockbit BYOT Authentication Successful! Your token is valid.")
         profile = client.get_profile()
         print(f"👤 Profile Found: {profile.get('data', {}).get('profile', {}).get('fullname')} (@{profile.get('data', {}).get('profile', {}).get('username')})")
+        sys.exit(0)
     except Exception as e:
         print(f"❌ {e}")
+        sys.exit(1)

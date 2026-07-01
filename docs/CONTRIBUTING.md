@@ -12,10 +12,19 @@ To maintain the high standard of our institutional-grade logic and to keep LLM c
 
 ## 2. Prompt Engineering Standards (`SKILL.md`)
 
+All skills share one layout — see `core/SKILL_TEMPLATE.md`:
+
+1. **YAML frontmatter** (`name`, `description`)
+2. **`# SKILL PROMPT — Title (Codename)`**
+3. **`## ROLE & PERSONA`**
+4. **`## PREFLIGHT GATES`** — Gate 1 (trading day) then Gate 2 (auth), with orchestrator / sub-agent / standalone tables
+5. **Skill-specific sections** — TOOL MODE, frameworks, FINAL OUTPUT FORMAT
+
 When updating `SKILL.md` (the brain of the AI):
 1. **Be Deterministic**: Avoid vague instructions. Instead of saying "Analyze the broker flow," say "Compare Top 1 vs Top 5 broker volume to determine if cornering is occurring."
 2. **Respect the Rule of 5**: If you are adding data that returns lists (e.g., top brokers, top gainers, top news), cap it at a maximum of 5 items. LLMs suffer from "Dilution of Attention" when fed long arrays.
 3. **Template Rigidity**: If you add a new data point to the report, embed it explicitly into the `FINAL OUTPUT FORMAT` markdown template. The AI must be forced to fill out the structure to prevent hallucinations.
+4. **Gate tables**: Do not duplicate auth-check across sub-agents — orchestrator runs both gates once per pipeline (`AGENTS.md` Rule 6).
 
 ## 3. Extending the API Scripts
 

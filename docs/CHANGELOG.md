@@ -5,7 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-01
+
+### Added
+- `scripts/auth-check.js` / `auth-check.py` — BYOT preflight after trading-day-check, before API scripts
+- `core/auth-preflight.js` / `auth_preflight.py` — session stamp (30 min TTL) for single pipeline auth gate
+- AGENTS.md Rule 6 (auth gate) and orchestration pipeline step 2
+- `core/SKILL_TEMPLATE.md` — canonical SKILL.md layout (role → preflight gates → instructions)
+- Tests: `auth-check.test.js`, `auth-preflight.test.js`
+
 ### Changed
+- Standardized all five `skills/*/SKILL.md` files: `ROLE & PERSONA` → `PREFLIGHT GATES` (Gate 1 trading day, Gate 2 auth) → detailed instructions
+- Auth preflight: orchestrator runs once; sub-agents skip; standalone runs once (`sentiment`: `macro-news` RSS exempt from both gates)
 - Moved user/developer docs to `docs/` (INSTALLATION, USER_GUIDE, ARCHITECTURE, CONTRIBUTING, ROADMAP, CHANGELOG)
 - Consolidated Python workspace shims via `scripts/_resolve_skill_script.py`
 - Installer deploys `ORCHESTRATION.md` to workspace root on local install
@@ -36,4 +47,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `.stockbit_token.json` excluded from npm package and git
 - Installer warns when BYOT token file is present (never overwritten)
 
+[1.0.1]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.1
 [1.0.0]: https://github.com/eddictive/tradingsquad-ai-skills/releases/tag/v1.0.0

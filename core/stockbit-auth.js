@@ -306,11 +306,13 @@ if (require.main === module) {
     const client = new StockbitClient();
     try {
       await client.login();
-      console.log("✅ Stockbit BYOT Authentication Successful! Your token is valid.");
+      console.log('✅ Stockbit BYOT Authentication Successful! Your token is valid.');
       const profile = await client.getProfile();
       console.log(`👤 Profile Found: ${profile.data.profile.fullname} (@${profile.data.profile.username})`);
+      process.exit(0);
     } catch (e) {
       console.error(`❌ ${e.message}`);
+      process.exit(1);
     }
   })();
 }

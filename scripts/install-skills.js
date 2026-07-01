@@ -181,19 +181,17 @@ async function runVerify() {
     ok = false;
   }
 
-  const tokenPath = path.join(userProjectDir, '.stockbit_token.json');
-  if (!fs.existsSync(tokenPath)) {
-    console.log(`   ⚠️  auth-smoke: skipped (no .stockbit_token.json in workspace)`);
+  const authCheckScript = path.join(userProjectDir, 'scripts', 'auth-check.js');
+  const authCheckFallback = path.join(__dirname, 'auth-check.js');
+  const authScript = fs.existsSync(authCheckScript) ? authCheckScript : authCheckFallback;
+  const auth = spawnSync(process.execPath, [authScript], { encoding: 'utf8' });
+  if (auth.status === 0) {
+    console.log(`   ✅ auth-check: BYOT token valid`);
+  } else if (!fs.existsSync(path.join(userProjectDir, '.stockbit_token.json'))) {
+    console.log(`   ⚠️  auth-check: skipped (no .stockbit_token.json in workspace)`);
   } else {
-    try {
-      const { StockbitClient } = require(path.join(__dirname, '..', 'core', 'stockbit-auth.js'));
-      const client = new StockbitClient();
-      await client.login();
-      console.log(`   ✅ auth-smoke: BYOT token loaded successfully`);
-    } catch (e) {
-      console.log(`   ❌ auth-smoke: ${e.message}`);
-      ok = false;
-    }
+    console.log(`   ❌ auth-check: failed (exit ${auth.status})`);
+    ok = false;
   }
 
   if (ok) {
@@ -325,6 +323,8 @@ const WORKSPACE_SHIMS = [
   'scanner-api.py',
   'quant-score.js',
   'quant-score.py',
+  'auth-check.js',
+  'auth-check.py',
 ];
 
 const WORKSPACE_AGENT_DOCS = ['ORCHESTRATION.md'];

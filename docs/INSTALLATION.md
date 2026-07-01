@@ -66,8 +66,11 @@ bun scripts/install-skills.js
 # Silent setup for all CLIs locally
 bun scripts/install-skills.js --local --all
 
-# Post-install verification (trading-day-check + auth smoke)
+# Post-install verification (trading-day-check + auth-check)
 node scripts/install-skills.js --verify
+
+# Manual BYOT preflight (run before API scripts in agent workflows)
+node scripts/auth-check.js
 
 # Pin a release tag when fetching remotely
 node scripts/install-skills.js --local --all --tag v1.0.0

@@ -11,14 +11,32 @@ The `institutional-analyst` is the **Master Orchestrator**. It coordinates four 
 For a complete ticker evaluation (e.g. BBCA swing trade):
 
 ```
-1. trading-day-check     → verify market is open (if intraday)
-2. technical-api         → getAnalysis(TICKER, MODE)
-3. fundamental-api       → keystats TICKER
-4. sentiment-api         → aggregate TICKER
-5. institutional-api     → broker + foreign flow (multi-timeframe)
-6. quant-score           → merge 4 engine scores (20+20+20+40) into 100-point rating
-7. Write report          → report/[TICKER]_institutional_analysis_[date].md
+1. trading-day-check     → verify market is open (if intraday / live scan)
+2. auth-check            → **once** — orchestrator only (STOP if exit 1)
+3. technical-api         → getAnalysis(TICKER, MODE)
+4. fundamental-api       → keystats TICKER
+5. sentiment-api         → aggregate TICKER
+6. institutional-api     → broker + foreign flow (multi-timeframe)
+7. quant-score           → merge 4 engine scores (20+20+20+40) into 100-point rating
+8. Write report          → report/[TICKER]_institutional_analysis_[date].md
 ```
+
+**Preflight (orchestrator runs once before step 3):**
+```bash
+node scripts/trading-day-check.js    # skip or adapt for swing/EOD-only requests per AGENTS.md Rule 5
+node scripts/auth-check.js           # 1× per pipeline — NOT per sub-skill
+```
+
+### Auth gate — who runs it?
+
+| Scenario | Runs `auth-check`? | Times |
+|----------|-------------------|-------|
+| Full pipeline via `institutional-analyst` | **Orchestrator only** (step 2) | **1×** |
+| Sub-agents (technical, fundamental, sentiment, scanner) when delegated | **No** — skip; trust orchestrator preflight | **0×** |
+| User invokes a **single** skill standalone | That skill, before its `*-api` | **1×** |
+| All 5 skills read naively (bug) | Each skill runs gate | **5×** — **wrong**; sub-agents must not |
+
+Successful `auth-check` writes `.data/temp/.auth-preflight.json` (30 min, invalidated if token file changes).
 
 Mode mapping: see `core/trading-modes.json`.
 
@@ -50,6 +68,7 @@ Grok does not expose `invoke_subagent`. Use **sequential skill reads + terminal 
 **Example script chain (short swing BBCA):**
 ```bash
 node scripts/trading-day-check.js
+node scripts/auth-check.js
 node skills/technical-analyst/scripts/technical-api.js BBCA short_swing
 node skills/fundamental-analyst/scripts/fundamental-api.js keystats BBCA
 node skills/sentiment-analyst/scripts/sentiment-api.js aggregate BBCA
@@ -117,6 +136,7 @@ node scripts/quant-score.js --input .data/temp/bbca_quant_input.json
 | Script | Workspace shim | Skill path (direct) |
 |--------|----------------|---------------------|
 | Trading day check | `node scripts/trading-day-check.js` | `skills/market-scanner/scripts/` |
+| Auth preflight | `node scripts/auth-check.js` | `core/stockbit-auth.js` (via shim) |
 | Market scanner | `node scripts/scanner-api.js livedraggers` | `skills/market-scanner/scripts/` |
 | Quant score | `node scripts/quant-score.js --help` | `core/quant-score.js` |
 | Institutional | `skills/institutional-analyst/scripts/institutional-api.js broker BBCA` | — |
@@ -129,10 +149,11 @@ All API scripts support `--help`.
 ## Sample Multi-Agent Prompt
 
 > Act as the Institutional Analyst. Analyze **BBCA** for **short swing** (1–3 weeks).
-> 1. Run trading-day-check.
-> 2. Fetch technical analysis (`short_swing`), fundamental keystats, sentiment aggregate, and 1-month broker summary.
-> 3. Compute Master Quant Score via `quant-score.js` (4 engines: 20+20+20+40).
-> 4. Produce the full institutional report and save to `report/`.
+> 1. Run `trading-day-check` (adapt for swing/EOD if market closed per AGENTS.md).
+> 2. Run `auth-check` — if exit 1, stop and ask user to fix `.stockbit_token.json`.
+> 3. Fetch technical analysis (`short_swing`), fundamental keystats, sentiment aggregate, and 1-month broker summary.
+> 4. Compute Master Quant Score via `quant-score.js` (4 engines: 20+20+20+40).
+> 5. Produce the full institutional report and save to `report/`.
 
 ---
 
